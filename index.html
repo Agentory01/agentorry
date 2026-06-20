@@ -260,6 +260,15 @@ html[data-theme="dark"] .theme-toggle{box-shadow:0 6px 20px rgba(0,0,0,0.4)}
 .payout-row{cursor:pointer;transition:background .15s}
 .payout-row:hover{background:var(--pale2)}
 .refund-row{background:var(--card);border:1.5px solid rgba(245,158,11,0.3);border-radius:14px;padding:14px 18px;margin-bottom:8px}
+
+/* ══ BUNDLES ══ */
+.bundle-widget{background:linear-gradient(135deg,rgba(108,99,255,0.05),rgba(139,92,246,0.03));border:1.5px solid rgba(108,99,255,0.2);border-radius:18px;padding:22px;margin:28px 0}
+.bundle-widget-items{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0}
+.bundle-item-thumb{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;border:2px solid var(--card);box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+.bundle-item-plus{font-size:1rem;color:var(--text3);font-weight:700}
+.bundle-row{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:8px}
+.bundle-row-items{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.bundle-row-tag{font-size:.68rem;font-weight:600;color:var(--text2);background:var(--pale2);padding:3px 9px;border-radius:100px}
 @media(max-width:680px){
   #ad-slot-board{grid-template-columns:repeat(2,1fr)!important}
 }
@@ -1011,6 +1020,14 @@ try{
         <button class="btn bp bsm" onclick="openCreateCouponModal()">+ New code</button>
       </div>
       <div id="coupons-list"></div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3)">Bundles</div>
+        <button class="btn bp bsm" onclick="openCreateBundleModal()">+ New bundle</button>
+      </div>
+      <div id="bundles-list"></div>
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
@@ -2473,6 +2490,7 @@ async function showProduct(p){
         '<div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">About this product</div>'+
         '<div class="pp-desc">'+escapeHtml(p.description||'No description provided.').replace(/\n/g,'<br>')+'</div>'+
         fwHtml+
+        '<div id="pp-bundle-widget"></div>'+
         '<div id="pp-reviews-section" style="margin-top:32px"></div>'+
       '</div>'+
       '<div>'+
@@ -2509,6 +2527,7 @@ async function showProduct(p){
 
   renderReviewsSection(p);
   renderFollowState(p.user_id);
+  renderBundleWidget(p);
   go('product');
 }
 
@@ -2895,6 +2914,266 @@ async function deleteCoupon(id){
   if(res&&res.error){showToast(res.error.message||'Could not delete code');return}
   showToast('Coupon deleted');
   rCoupons();
+}
+
+// ══ PRODUCT BUNDLES ══
+
+// --- Buyer-facing widget on a product detail page ---
+async function renderBundleWidget(p){
+  const container=document.getElementById('pp-bundle-widget');
+  if(!container)return;
+  container.innerHTML='';
+
+  // find bundles owned by this product's seller that include this product
+  const items=await sbGet(`/rest/v1/bundle_items?select=bundle_id&product_id=eq.${p.id}`);
+  const bundleIds=[...new Set((items||[]).map(i=>i.bundle_id))];
+  if(!bundleIds.length)return;
+
+  const bundles=await sbGet(`/rest/v1/bundles?select=*&id=in.(${bundleIds.join(',')})&published=eq.true`);
+  const liveBundles=Array.isArray(bundles)?bundles:[];
+  if(!liveBundles.length)return;
+
+  const bundle=liveBundles[0]; // show the first matching live bundle
+  const allItems=await sbGet(`/rest/v1/bundle_items?select=product_id&bundle_id=eq.${bundle.id}`);
+  const productIds=(allItems||[]).map(i=>i.product_id);
+  if(!productIds.length)return;
+
+  const products=await sbGet(`/rest/v1/products?select=id,title,category,price,image_url&id=in.(${productIds.join(',')})`);
+  const list=Array.isArray(products)?products:[];
+  if(!list.length)return;
+
+  const combinedPrice=list.reduce((s,x)=>s+(x.price||0),0);
+  const savings=Math.max(0,combinedPrice-bundle.bundle_price);
+  const isMine=user&&p.user_id===user.id;
+
+  const thumbsHtml=list.map(item=>{
+    const img=item.image_url?'<img src="'+item.image_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">':em(item.category);
+    return '<div class="bundle-item-thumb" style="background:'+gr(item.category)+'" title="'+escapeHtml(item.title||'')+'">'+img+'</div>';
+  }).join('<span class="bundle-item-plus">+</span>');
+
+  container.innerHTML=`
+    <div class="bundle-widget">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:1.1rem">📦</span>
+        <span style="font-size:.85rem;font-weight:800;color:var(--text)">${escapeHtml(bundle.title)}</span>
+      </div>
+      ${bundle.description?'<p style="font-size:.8rem;color:var(--text2);margin-bottom:4px">'+escapeHtml(bundle.description)+'</p>':''}
+      <div class="bundle-widget-items">${thumbsHtml}</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px">
+        <span style="font-size:1.4rem;font-weight:800;color:var(--text);letter-spacing:-.02em">$${bundle.bundle_price}</span>
+        <span style="font-size:.82rem;color:var(--text3);text-decoration:line-through">$${combinedPrice.toFixed(2)}</span>
+        ${savings>0?'<span style="font-size:.72rem;font-weight:700;color:var(--green);background:rgba(22,163,74,0.1);padding:3px 9px;border-radius:100px">Save $'+savings.toFixed(2)+'</span>':''}
+      </div>
+      ${isMine
+        ?'<button class="btn bg-btn bsm" onclick="go(\'seller\')">Manage in dashboard →</button>'
+        :'<button class="btn bp bsm" onclick="openBundleCheckoutModal(\''+bundle.id+'\')">Get the bundle →</button>'
+      }
+    </div>`;
+}
+
+function openBundleCheckoutModal(bundleId){
+  if(!user){sessionStorage.setItem('redirect','product');showToast('Please sign in first');go('login');return}
+  showBundleCheckout(bundleId);
+}
+
+async function showBundleCheckout(bundleId){
+  const rows=await sbGet(`/rest/v1/bundles?select=*&id=eq.${bundleId}`);
+  const bundle=rows&&rows[0];
+  if(!bundle){showToast('Bundle not found');return}
+  const items=await sbGet(`/rest/v1/bundle_items?select=product_id&bundle_id=eq.${bundleId}`);
+  const productIds=(items||[]).map(i=>i.product_id);
+  const products=await sbGet(`/rest/v1/products?select=id,title&id=in.(${productIds.join(',')})`);
+  const list=Array.isArray(products)?products:[];
+
+  const existing=document.getElementById('bundle-checkout-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='bundle-checkout-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25)">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--pale);border:1px solid rgba(108,99,255,0.2);border-radius:100px;font-size:.65rem;font-weight:800;color:var(--accent);margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase">🧪 Test checkout — no real charge</div>
+      <div style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:10px">${escapeHtml(bundle.title)}</div>
+      <div style="font-size:1.8rem;font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:14px">$${bundle.bundle_price}</div>
+      <div style="text-align:left;background:var(--pale2);border-radius:12px;padding:12px 16px;margin-bottom:20px">
+        ${list.map(p=>'<div style="font-size:.8rem;color:var(--text2);padding:3px 0">✓ '+escapeHtml(p.title||'Untitled')+'</div>').join('')}
+      </div>
+      <p style="font-size:.78rem;color:var(--text2);line-height:1.6;margin-bottom:24px">You'll get instant access to every product in this bundle.</p>
+      <button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="bundle-checkout-confirm-btn" onclick="confirmBundlePurchase('${bundleId}')">Simulate purchase →</button>
+      <button class="btn bg-btn" style="width:100%;justify-content:center" onclick="document.getElementById('bundle-checkout-modal').remove()">Cancel</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function confirmBundlePurchase(bundleId){
+  const btn=document.getElementById('bundle-checkout-confirm-btn');
+  if(btn){btn.textContent='Processing...';btn.disabled=true}
+  const rows=await sbGet(`/rest/v1/bundles?select=*&id=eq.${bundleId}`);
+  const bundle=rows&&rows[0];
+  if(!bundle){showToast('Bundle not found');document.getElementById('bundle-checkout-modal')?.remove();return}
+
+  const amount=bundle.bundle_price||0;
+  const platformFee=Math.round(amount*0.09*100)/100;
+  const sellerPayout=Math.max(0,Math.round((amount-platformFee)*100)/100);
+
+  const res=await sbAuthPost('/rest/v1/bundle_purchases',{
+    bundle_id:bundle.id,
+    user_id:user.id,
+    seller_id:bundle.seller_id,
+    amount,
+    platform_fee:platformFee,
+    seller_payout:sellerPayout,
+    is_simulated:true
+  });
+  if(res&&res.error){
+    showToast(/duplicate|unique/i.test(res.error.message||'')?'You already own this bundle':(res.error.message||'Purchase failed'));
+    if(btn){btn.textContent='Simulate purchase →';btn.disabled=false}
+    return;
+  }
+  showToast('Bundle purchased ✓ You now own every item in it');
+  document.getElementById('bundle-checkout-modal')?.remove();
+  myDownloads.clear(); // bundle purchase grants downloads on every included product server-side
+}
+
+// --- Seller-facing bundle creation & management ---
+async function rBundles(){
+  if(!user)return;
+  const list=document.getElementById('bundles-list');
+  if(!list)return;
+  const bundles=await sbGet(`/rest/v1/bundles?select=*&seller_id=eq.${user.id}&order=created_at.desc`);
+  const rows=Array.isArray(bundles)?bundles:[];
+  if(!rows.length){
+    list.innerHTML=`<div style="font-size:.8rem;color:var(--text3);padding:10px 2px">No bundles yet — combine your products into a discounted package.</div>`;
+    return;
+  }
+  const allItems=await sbGet(`/rest/v1/bundle_items?select=bundle_id,product_id&bundle_id=in.(${rows.map(b=>b.id).join(',')})`);
+  const itemsByBundle={};
+  (allItems||[]).forEach(i=>{if(!itemsByBundle[i.bundle_id])itemsByBundle[i.bundle_id]=[];itemsByBundle[i.bundle_id].push(i.product_id)});
+  const allProductIds=[...new Set((allItems||[]).map(i=>i.product_id))];
+  const products=allProductIds.length?await sbGet(`/rest/v1/products?select=id,title&id=in.(${allProductIds.join(',')})`):[];
+  const pMap={};(products||[]).forEach(p=>pMap[p.id]=p);
+
+  list.innerHTML=rows.map(b=>{
+    const itemIds=itemsByBundle[b.id]||[];
+    const tags=itemIds.map(id=>pMap[id]?'<span class="bundle-row-tag">'+escapeHtml(pMap[id].title||'Untitled')+'</span>':'').join('');
+    return `<div class="bundle-row">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:.85rem;font-weight:800;color:var(--text)">${escapeHtml(b.title)}</div>
+          <div style="font-size:.72rem;color:var(--text3)">$${b.bundle_price} · ${itemIds.length} product${itemIds.length===1?'':'s'} · ${b.published?'Live':'Hidden'}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn bg-btn bxs" onclick="toggleBundlePublished('${b.id}',${!b.published})">${b.published?'Hide':'Show'}</button>
+          <button class="ib del" onclick="deleteBundle('${b.id}')" title="Delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+        </div>
+      </div>
+      <div class="bundle-row-items">${tags}</div>
+    </div>`;
+  }).join('');
+}
+
+async function openCreateBundleModal(){
+  if(!user)return;
+  const mine=await sbGet(`/rest/v1/products?select=id,title,price,category&user_id=eq.${user.id}&published=eq.true&order=created_at.desc`);
+  const products=Array.isArray(mine)?mine:[];
+  if(products.length<2){
+    showToast('You need at least 2 published products to make a bundle');
+    return;
+  }
+
+  const existing=document.getElementById('bundle-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='bundle-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+
+  const checklist=products.map(p=>`
+    <label style="display:flex;align-items:center;gap:10px;padding:9px 4px;cursor:pointer;border-bottom:1px solid var(--border)">
+      <input type="checkbox" class="bundle-item-checkbox" value="${p.id}" onchange="updateBundlePriceSuggestion()" style="width:16px;height:16px;cursor:pointer">
+      <span style="flex:1;font-size:.85rem;color:var(--text)">${escapeHtml(p.title||'Untitled')}</span>
+      <span style="font-size:.78rem;color:var(--text3);font-weight:700">$${p.price||0}</span>
+    </label>`).join('');
+
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:440px;width:100%;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25);max-height:90vh;overflow-y:auto">
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:18px">New bundle</div>
+      <div class="fg"><label class="fl">Bundle name</label><input class="fi" id="bundle-title-input" placeholder="The Complete Toolkit" maxlength="100"></div>
+      <div class="fg"><label class="fl">Description (optional)</label><textarea class="fi" id="bundle-desc-input" rows="2" placeholder="What's included and why it's a deal" style="resize:vertical"></textarea></div>
+      <div class="fg">
+        <label class="fl">Select products to include (min 2)</label>
+        <div style="border:1.5px solid var(--border);border-radius:12px;padding:6px 10px;max-height:200px;overflow-y:auto">${checklist}</div>
+      </div>
+      <div class="fg"><label class="fl">Bundle price (USD)</label><input class="fi" id="bundle-price-input" type="number" min="0" step="0.01" placeholder="0.00"></div>
+      <div id="bundle-price-hint" style="font-size:.74rem;color:var(--text3);margin-bottom:18px"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn bp" style="flex:1;justify-content:center" id="bundle-save-btn" onclick="createBundle()">Create bundle</button>
+        <button class="btn bg-btn" onclick="document.getElementById('bundle-modal').remove()">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  window.__bundleProductPrices=Object.fromEntries(products.map(p=>[p.id,p.price||0]));
+}
+
+function updateBundlePriceSuggestion(){
+  const checked=Array.from(document.querySelectorAll('.bundle-item-checkbox:checked')).map(cb=>cb.value);
+  const prices=window.__bundleProductPrices||{};
+  const combined=checked.reduce((s,id)=>s+(prices[id]||0),0);
+  const hint=document.getElementById('bundle-price-hint');
+  if(hint)hint.textContent=checked.length>=2?'Combined individual price: $'+combined.toFixed(2)+' — price the bundle below that to make it a deal':'Select at least 2 products';
+}
+
+async function createBundle(){
+  const btn=document.getElementById('bundle-save-btn');
+  const title=(document.getElementById('bundle-title-input').value||'').trim();
+  const description=(document.getElementById('bundle-desc-input').value||'').trim();
+  const price=parseFloat(document.getElementById('bundle-price-input').value);
+  const selectedIds=Array.from(document.querySelectorAll('.bundle-item-checkbox:checked')).map(cb=>cb.value);
+
+  if(!title){showToast('Enter a bundle name');return}
+  if(selectedIds.length<2){showToast('Select at least 2 products');return}
+  if(isNaN(price)||price<0){showToast('Enter a valid bundle price');return}
+
+  if(btn){btn.textContent='Creating...';btn.disabled=true}
+  const res=await sbAuthPost('/rest/v1/bundles',{
+    seller_id:user.id,
+    title,
+    description:description||null,
+    bundle_price:price
+  });
+  if(res&&res.error){
+    showToast(res.error.message||'Could not create bundle');
+    if(btn){btn.textContent='Create bundle';btn.disabled=false}
+    return;
+  }
+  const bundle=Array.isArray(res)?res[0]:res;
+  if(!bundle||!bundle.id){
+    showToast('Bundle created but could not link products — try editing it');
+    document.getElementById('bundle-modal')?.remove();
+    rBundles();
+    return;
+  }
+  const itemRows=selectedIds.map(pid=>({bundle_id:bundle.id,product_id:pid}));
+  const itemsRes=await sbAuthPost('/rest/v1/bundle_items',itemRows);
+  if(itemsRes&&itemsRes.error){
+    showToast('Bundle created, but adding products failed: '+(itemsRes.error.message||''));
+  } else {
+    showToast('Bundle created ✓');
+  }
+  document.getElementById('bundle-modal')?.remove();
+  rBundles();
+}
+
+async function toggleBundlePublished(id,newPublished){
+  const res=await sbAuthPost(`/rest/v1/bundles?id=eq.${id}`,{published:newPublished},'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not update bundle');return}
+  rBundles();
+}
+
+async function deleteBundle(id){
+  const res=await sbAuthPost(`/rest/v1/bundles?id=eq.${id}`,null,'DELETE');
+  if(res&&res.error){showToast(res.error.message||'Could not delete bundle');return}
+  showToast('Bundle deleted');
+  rBundles();
 }
 
 // ══ AD CAMPAIGNS — slot-based ranked ads (simulated payment, no real processor) ══
@@ -4343,6 +4622,7 @@ async function rSeller(){
   renderActiveCampaigns();
   rCoupons();
   renderRefundRequests();
+  rBundles();
 
   const list=document.getElementById('slist');
   if(!mine.length){
