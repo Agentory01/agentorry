@@ -91,6 +91,32 @@ nav.sc{box-shadow:0 2px 20px rgba(108,99,255,0.08)}
 .nb-s{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 14px rgba(108,99,255,0.3)}
 .nb-s:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(108,99,255,0.4)}
 .nav-av{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:800;color:#fff;cursor:pointer}
+
+/* ══ NOTIFICATIONS ══ */
+.notif-wrap{position:relative;flex-shrink:0}
+.notif-bell{position:relative;width:36px;height:36px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;padding:0}
+.notif-bell:hover{border-color:var(--accent);background:var(--pale)}
+.notif-bell svg{width:16px;height:16px;stroke:var(--text2)}
+.notif-bell:hover svg{stroke:var(--accent)}
+.notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--red);border-radius:50%;border:1.5px solid var(--card)}
+.notif-panel{display:none;position:absolute;top:46px;right:0;width:340px;max-height:420px;background:var(--card);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 12px 40px rgba(var(--shadow-col),0.18);overflow:hidden;z-index:300;flex-direction:column}
+.notif-panel.on{display:flex}
+.notif-panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);font-size:.85rem;font-weight:800;color:var(--text)}
+.notif-mark-all{font-size:.7rem;font-weight:700;color:var(--accent);cursor:pointer}
+.notif-mark-all:hover{text-decoration:underline}
+.notif-list{overflow-y:auto;max-height:360px}
+.notif-item{display:flex;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.notif-item:hover{background:var(--pale2)}
+.notif-item.unread{background:var(--pale)}
+.notif-item-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+.notif-item-body{flex:1;min-width:0}
+.notif-item-title{font-size:.8rem;font-weight:700;color:var(--text);line-height:1.4}
+.notif-item-sub{font-size:.74rem;color:var(--text3);margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.notif-item-time{font-size:.66rem;color:var(--text3);margin-top:4px}
+.notif-empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:.82rem}
+@media(max-width:480px){
+  .notif-panel{position:fixed;top:62px;left:12px;right:12px;width:auto}
+}
 .theme-toggle{position:fixed;bottom:24px;left:24px;width:52px;height:52px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;padding:0;z-index:9998;box-shadow:0 6px 20px rgba(var(--shadow-col),0.15)}
 .theme-toggle:hover{border-color:var(--accent);background:var(--pale);transform:translateY(-2px);box-shadow:0 10px 28px rgba(108,99,255,0.25)}
 .theme-toggle svg{width:22px;height:22px;stroke:var(--text);transition:stroke .2s}
@@ -506,6 +532,19 @@ try{
     <span class="nt" id="t-upload" onclick="go('upload');tab('upload')">Sell</span>
     <span class="nt" id="t-blog" onclick="go('blog');tab('blog')">Blog</span>
   </div>
+  <div class="notif-wrap" id="notif-wrap" style="display:none">
+    <button class="notif-bell" id="notif-bell" onclick="toggleNotifPanel()" aria-label="Notifications" title="Notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="notif-dot" id="notif-dot" style="display:none"></span>
+    </button>
+    <div class="notif-panel" id="notif-panel">
+      <div class="notif-panel-head">
+        <span>Notifications</span>
+        <span class="notif-mark-all" id="notif-mark-all" onclick="markAllNotifsRead()">Mark all read</span>
+      </div>
+      <div class="notif-list" id="notif-list"></div>
+    </div>
+  </div>
   <div class="nr" id="nav-r">
     <button class="nb nb-g" onclick="go('login')">Sign in</button>
     <button class="nb nb-s" onclick="go('signup')">Get started →</button>
@@ -521,6 +560,13 @@ try{
   <span class="nm-link" id="m-t-upload" onclick="go('upload');tab('upload');toggleMobileMenu()">Sell</span>
   <span class="nm-link" id="m-t-blog" onclick="go('blog');tab('blog');toggleMobileMenu()">Blog</span>
   <div class="nm-divider"></div>
+  <div class="nm-row" id="nm-notif-row" style="display:none;align-items:center;justify-content:space-between;padding:10px 6px;cursor:pointer" onclick="go('messages');toggleMobileMenu()">
+    <span style="font-size:.95rem;font-weight:700;color:var(--text2);display:flex;align-items:center;gap:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Notifications
+    </span>
+    <span id="nm-notif-badge" style="display:none;background:var(--red);color:#fff;font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:100px"></span>
+  </div>
   <div class="nm-actions" id="nm-actions">
     <button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('login');toggleMobileMenu()">Sign in</button>
     <button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('signup');toggleMobileMenu()">Get started →</button>
@@ -2175,6 +2221,7 @@ function updateNav(){
       ?`<button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('upload');toggleMobileMenu()">↑ Upload</button><button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('profile');toggleMobileMenu()">Profile</button>`
       :`<button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('login');toggleMobileMenu()">Sign in</button><button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('signup');toggleMobileMenu()">Get started →</button>`;
   }
+  initNotifications();
 }
 
 function toggleMobileMenu(){
@@ -2205,7 +2252,7 @@ function go(n){
   if(n==='seller')rSeller();
   if(n==='upload')resetValidation();
   if(n==='profile'&&user){rProfile()}
-  if(n==='purchases'){document.getElementById('pc-c').textContent='0 products';document.getElementById('pc-list').innerHTML=es('🛍️','No purchases yet','Browse the marketplace',"go('marketplace')")}
+  if(n==='purchases'&&user){rPurchases()}
   if(n==='wishlist'){document.getElementById('wc-c').textContent='0 saved';document.getElementById('wgrid').innerHTML=`<div style="grid-column:1/-1">${es('❤️','Wishlist empty','Save products you like',"go('marketplace')")}</div>`}
   if(n==='messages')rMessages();
   if(n!=='messages'&&realtimeWs){try{realtimeWs.close();realtimeWs=null}catch(e){}}
@@ -2213,7 +2260,7 @@ function go(n){
 }
 
 // ══ PRODUCT PAGE ══
-function showProduct(p){
+async function showProduct(p){
   window.__prevPage = document.querySelector('.page.on')?.id?.replace('page-','') || 'marketplace';
   const price = p.price||0;
   const cat = p.category||'Other';
@@ -2229,11 +2276,24 @@ function showProduct(p){
   const priceHtml = price===0 ? 'Free' : '$'+price;
   const priceClass = price===0 ? 'pp-price free' : 'pp-price';
   const subText = price===0 ? 'Free to download' : 'One-time purchase';
+
+  let alreadyPurchased=false;
+  if(user && !isMine && price>0){
+    if(myPurchases.has(p.id)){
+      alreadyPurchased=true;
+    } else {
+      const pu=await sbGet(`/rest/v1/purchases?select=id&user_id=eq.${user.id}&product_id=eq.${p.id}&status=eq.completed`);
+      if(Array.isArray(pu)&&pu.length){ myPurchases.add(p.id); alreadyPurchased=true; }
+    }
+  }
+
   let actionBtn = '';
   if(isMine){
     actionBtn = '<button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="pp-main-btn">Manage in Dashboard →</button>';
   } else if(price===0){
     actionBtn = '<button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="pp-main-btn">Download Free →</button>';
+  } else if(alreadyPurchased){
+    actionBtn = '<button class="btn bs" style="width:100%;justify-content:center;margin-bottom:10px" id="pp-main-btn">✓ Purchased</button>';
   } else {
     actionBtn = '<button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="pp-main-btn">Buy Now — $'+price+'</button>';
   }
@@ -2284,7 +2344,8 @@ function showProduct(p){
     mainBtnEl.onclick = function(){
       if(isMine){ go('seller'); }
       else if(price===0){ downloadFree(p); }
-      else { showToast('Checkout coming soon!'); }
+      else if(alreadyPurchased){ showToast('You already own this product'); }
+      else { simulatedCheckout(p); }
     };
   }
   const msgBtnEl = document.getElementById('pp-msg-btn');
@@ -2329,7 +2390,7 @@ function ratingBadge(productId){
 }
 
 // ══ REVIEWS ══
-let currentReviewProduct=null, currentReviewRating=0, myDownloads=new Set();
+let currentReviewProduct=null, currentReviewRating=0, myDownloads=new Set(), myPurchases=new Set();
 
 async function downloadFree(p){
   if(!user){sessionStorage.setItem('redirect','product');showToast('Please sign in first');go('login');return}
@@ -2345,6 +2406,60 @@ async function downloadFree(p){
   myDownloads.add(p.id);
   showToast('Download started — you can now leave a review ✓');
   renderReviewsSection(p);
+}
+
+// ══ SIMULATED CHECKOUT (test mode — no real payment processor yet) ══
+async function simulatedCheckout(p){
+  if(!user){sessionStorage.setItem('redirect','product');showToast('Please sign in first');go('login');return}
+  showCheckoutModal(p);
+}
+
+function showCheckoutModal(p){
+  const existing=document.getElementById('checkout-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='checkout-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25)">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--pale);border:1px solid rgba(108,99,255,0.2);border-radius:100px;font-size:.65rem;font-weight:800;color:var(--accent);margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase">🧪 Test checkout — no real charge</div>
+      <div style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:6px">${escapeHtml(p.title||'Untitled')}</div>
+      <div style="font-size:1.8rem;font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:18px">$${p.price}</div>
+      <p style="font-size:.8rem;color:var(--text2);line-height:1.6;margin-bottom:24px">Real payments aren't live yet. This simulates a completed purchase so you can test downloads, reviews, and seller notifications.</p>
+      <button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="checkout-confirm-btn" onclick="confirmSimulatedPurchase('${p.id}')">Simulate purchase →</button>
+      <button class="btn bg-btn" style="width:100%;justify-content:center" onclick="document.getElementById('checkout-modal').remove()">Cancel</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function confirmSimulatedPurchase(productId){
+  const btn=document.getElementById('checkout-confirm-btn');
+  if(btn){btn.textContent='Processing...';btn.disabled=true}
+  const rows=await sbGet(`/rest/v1/products?select=*&id=eq.${productId}`);
+  const p=rows&&rows[0];
+  if(!p){showToast('Product not found');document.getElementById('checkout-modal')?.remove();return}
+  const res=await sbAuthPost('/rest/v1/purchases',{
+    user_id:user.id,
+    product_id:p.id,
+    seller_id:p.user_id,
+    amount:p.price||0,
+    is_simulated:true
+  });
+  if(res&&res.error){
+    if(/duplicate|unique/i.test(res.error.message||'')){
+      showToast('You already purchased this — opening review');
+    } else {
+      showToast(res.error.message||'Purchase failed — try again');
+      if(btn){btn.textContent='Simulate purchase →';btn.disabled=false}
+      return;
+    }
+  } else {
+    showToast('Purchase complete ✓ Seller notified');
+  }
+  document.getElementById('checkout-modal')?.remove();
+  myPurchases.add(p.id);
+  if(currentReviewProduct&&currentReviewProduct.id===p.id) renderReviewsSection(p);
+  showProduct(p);
 }
 
 async function renderReviewsSection(p){
@@ -2375,7 +2490,7 @@ async function renderReviewsSection(p){
   const isMine = user && p.user_id === user.id;
   const myReview = user ? list.find(r=>r.user_id===user.id) : null;
 
-  // Determine eligibility: logged in, not own product, no existing review, and has a qualifying download (free products only for now)
+  // Determine eligibility: logged in, not own product, no existing review, and has a qualifying download (free) or purchase (paid)
   let canReview=false;
   if(user && !isMine && !myReview){
     if((p.price||0)===0){
@@ -2384,8 +2499,13 @@ async function renderReviewsSection(p){
         if(Array.isArray(d)&&d.length) myDownloads.add(p.id);
       }
       canReview=myDownloads.has(p.id);
+    } else {
+      if(!myPurchases.has(p.id)){
+        const pu=await sbGet(`/rest/v1/purchases?select=id&user_id=eq.${user.id}&product_id=eq.${p.id}&status=eq.completed`);
+        if(Array.isArray(pu)&&pu.length) myPurchases.add(p.id);
+      }
+      canReview=myPurchases.has(p.id);
     }
-    // paid products: not reviewable until checkout/purchases exist
   }
 
   let formHtml='';
@@ -2394,7 +2514,7 @@ async function renderReviewsSection(p){
   } else if(canReview){
     formHtml=reviewFormHtml(p.id);
   } else if(user && !isMine && (p.price||0)>0){
-    formHtml='<div style="padding:14px 18px;background:var(--pale2);border:1.5px solid var(--border);border-radius:14px;margin-bottom:20px;font-size:.8rem;color:var(--text3)">Reviews open to verified buyers once checkout is live.</div>';
+    formHtml='<div style="padding:14px 18px;background:var(--pale2);border:1.5px solid var(--border);border-radius:14px;margin-bottom:20px;font-size:.8rem;color:var(--text3)">Purchase this product to leave a review.</div>';
   } else if(!user){
     formHtml='<div style="padding:14px 18px;background:var(--pale2);border:1.5px solid var(--border);border-radius:14px;margin-bottom:20px;font-size:.8rem;color:var(--text3)"><span style="color:var(--accent);font-weight:700;cursor:pointer" onclick="go(\'login\')">Sign in</span> to leave a review.</div>';
   }
@@ -3081,6 +3201,181 @@ async function rSeller(){
       <button class="ib del" onclick="showToast('Delete coming soon!')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
     </div>
   </div>`).join('');
+}
+
+async function rPurchases(){
+  if(!user)return;
+  const purchases=await sbGet(`/rest/v1/purchases?select=*&user_id=eq.${user.id}&status=eq.completed&order=created_at.desc`);
+  const list=Array.isArray(purchases)?purchases:[];
+  document.getElementById('pc-c').textContent=list.length+' product'+(list.length===1?'':'s');
+  const container=document.getElementById('pc-list');
+  if(!list.length){
+    container.innerHTML=es('🛍️','No purchases yet','Browse the marketplace',"go('marketplace')");
+    return;
+  }
+  const productIds=list.map(pu=>pu.product_id);
+  const products=await sbGet(`/rest/v1/products?select=*&id=in.(${productIds.join(',')})`);
+  const pMap={}; (products||[]).forEach(p=>pMap[p.id]=p);
+  container.innerHTML='<div class="plist">'+list.map(pu=>{
+    const p=pMap[pu.product_id];
+    if(!p)return '';
+    const date=new Date(pu.created_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+    return '<div class="pi" data-product-id="'+p.id+'" onclick="goToPurchasedProduct(\''+p.id+'\')">'
+      +'<div class="pi-thumb" style="background:'+gr(p.category)+'">'+em(p.category)+'</div>'
+      +'<div class="pi-info">'
+        +'<div class="pi-name">'+escapeHtml(p.title||'Untitled')+'</div>'
+        +'<div class="pi-meta"><span>'+(p.category||'—')+'</span><span>$'+pu.amount+'</span><span>Purchased '+date+'</span></div>'
+      +'</div>'
+    +'</div>';
+  }).join('')+'</div>';
+}
+
+async function goToPurchasedProduct(productId){
+  const rows=await sbGet(`/rest/v1/products?select=*&id=eq.${productId}`);
+  if(rows&&rows[0])showProduct(rows[0]);
+}
+
+// ══ NOTIFICATIONS ══
+let notifList=[],notifWs=null,notifPanelOpen=false;
+
+const NOTIF_ICONS={message:{e:'💬',bg:'rgba(108,99,255,0.12)'},review:{e:'⭐',bg:'rgba(245,158,11,0.12)'},sale:{e:'💰',bg:'rgba(22,163,74,0.12)'},system:{e:'🔔',bg:'var(--pale)'}};
+
+function timeAgo(dateStr){
+  const diff=(Date.now()-new Date(dateStr).getTime())/1000;
+  if(diff<60)return 'now';
+  if(diff<3600)return Math.floor(diff/60)+'m ago';
+  if(diff<86400)return Math.floor(diff/3600)+'h ago';
+  if(diff<604800)return Math.floor(diff/86400)+'d ago';
+  return new Date(dateStr).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+
+async function loadNotifications(){
+  if(!user)return;
+  const rows=await sbGet(`/rest/v1/notifications?select=*&user_id=eq.${user.id}&order=created_at.desc&limit=30`);
+  notifList=Array.isArray(rows)?rows:[];
+  renderNotifPanel();
+  updateNotifBadge();
+}
+
+function updateNotifBadge(){
+  const unread=notifList.filter(n=>!n.read).length;
+  const dot=document.getElementById('notif-dot');
+  const mBadge=document.getElementById('nm-notif-badge');
+  if(dot)dot.style.display=unread>0?'block':'none';
+  if(mBadge){
+    if(unread>0){mBadge.textContent=unread>9?'9+':unread;mBadge.style.display='inline-block'}
+    else mBadge.style.display='none';
+  }
+}
+
+function renderNotifPanel(){
+  const list=document.getElementById('notif-list');
+  if(!list)return;
+  if(!notifList.length){
+    list.innerHTML='<div class="notif-empty">No notifications yet<br><span style="font-size:.74rem">New messages and reviews will show up here</span></div>';
+    return;
+  }
+  list.innerHTML=notifList.map(n=>{
+    const ic=NOTIF_ICONS[n.type]||NOTIF_ICONS.system;
+    return '<div class="notif-item'+(n.read?'':' unread')+'" data-notif-id="'+n.id+'" onclick="openNotification(\''+n.id+'\')">'
+      +'<div class="notif-item-icon" style="background:'+ic.bg+'">'+ic.e+'</div>'
+      +'<div class="notif-item-body">'
+        +'<div class="notif-item-title">'+escapeHtml(n.title)+'</div>'
+        +(n.body?'<div class="notif-item-sub">'+escapeHtml(n.body)+'</div>':'')
+        +'<div class="notif-item-time">'+timeAgo(n.created_at)+'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
+function toggleNotifPanel(){
+  notifPanelOpen=!notifPanelOpen;
+  const panel=document.getElementById('notif-panel');
+  if(panel)panel.classList.toggle('on',notifPanelOpen);
+  if(notifPanelOpen)loadNotifications();
+}
+
+document.addEventListener('click',function(e){
+  const wrap=document.getElementById('notif-wrap');
+  if(notifPanelOpen && wrap && !wrap.contains(e.target)){
+    notifPanelOpen=false;
+    const panel=document.getElementById('notif-panel');
+    if(panel)panel.classList.remove('on');
+  }
+});
+
+async function openNotification(id){
+  const n=notifList.find(x=>x.id===id);
+  if(!n)return;
+  if(!n.read){
+    n.read=true;
+    renderNotifPanel();
+    updateNotifBadge();
+    sbAuthPost(`/rest/v1/notifications?id=eq.${id}`,{read:true},'PATCH');
+  }
+  notifPanelOpen=false;
+  document.getElementById('notif-panel')?.classList.remove('on');
+  if(n.link_type==='messages'){
+    go('messages');
+  } else if(n.link_type==='product' && n.link_id){
+    const rows=await sbGet(`/rest/v1/products?select=*&id=eq.${n.link_id}`);
+    if(rows&&rows[0]) showProduct(rows[0]);
+    else go('marketplace');
+  }
+}
+
+async function markAllNotifsRead(){
+  if(!user||!notifList.length)return;
+  const unreadIds=notifList.filter(n=>!n.read).map(n=>n.id);
+  if(!unreadIds.length)return;
+  notifList.forEach(n=>n.read=true);
+  renderNotifPanel();
+  updateNotifBadge();
+  await sbAuthPost(`/rest/v1/notifications?user_id=eq.${user.id}&read=eq.false`,{read:true},'PATCH');
+}
+
+function subscribeToNotifications(){
+  if(notifWs){try{notifWs.close()}catch(e){}}
+  if(!user)return;
+  const wsUrl=SB.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+KEY+'&vsn=1.0.0';
+  const ws=new WebSocket(wsUrl);
+  notifWs=ws;
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({topic:'realtime:public:notifications',event:'phx_join',payload:{config:{broadcast:{ack:false,self:false},presence:{key:''},postgres_changes:[{event:'INSERT',schema:'public',table:'notifications'}]}},ref:'1'}));
+  };
+  ws.onmessage=(e)=>{
+    try{
+      const data=JSON.parse(e.data);
+      if(data.event==='postgres_changes'||data.event==='INSERT'){
+        const rec=data.payload?.data?.record||data.payload?.record;
+        if(!rec||rec.user_id!==user.id)return;
+        notifList.unshift(rec);
+        renderNotifPanel();
+        updateNotifBadge();
+        showToast((NOTIF_ICONS[rec.type]||NOTIF_ICONS.system).e+' '+rec.title);
+      }
+      if(data.event==='phx_reply'&&data.ref==='1'){
+        setInterval(()=>ws.readyState===1&&ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:'hb'})),25000);
+      }
+    }catch(err){}
+  };
+  ws.onerror=()=>{};
+}
+
+function initNotifications(){
+  const wrap=document.getElementById('notif-wrap');
+  const row=document.getElementById('nm-notif-row');
+  if(user){
+    if(wrap)wrap.style.display='block';
+    if(row)row.style.display='flex';
+    loadNotifications();
+    subscribeToNotifications();
+  } else {
+    if(wrap)wrap.style.display='none';
+    if(row)row.style.display='none';
+    if(notifWs){try{notifWs.close()}catch(e){}notifWs=null}
+    notifList=[];
+  }
 }
 
 // ══ MESSAGES ══
