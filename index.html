@@ -1007,7 +1007,22 @@ try{
       <div id="coupons-list"></div>
     </div>
 
-    <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Your products</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3)">Your products</div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:.78rem;font-weight:600;color:var(--text2);cursor:pointer;user-select:none">
+        <input type="checkbox" id="bulk-select-all" onchange="toggleSelectAllProducts(this.checked)" style="width:15px;height:15px;cursor:pointer">
+        Select all
+      </label>
+    </div>
+    <div id="bulk-action-bar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--pale);border:1.5px solid rgba(108,99,255,0.25);border-radius:14px;padding:12px 16px;margin-bottom:12px">
+      <span id="bulk-selected-count" style="font-size:.82rem;font-weight:700;color:var(--text)">0 selected</span>
+      <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
+        <button class="btn bg-btn bxs" onclick="bulkSetPublished(true)">Publish</button>
+        <button class="btn bg-btn bxs" onclick="bulkSetPublished(false)">Unpublish</button>
+        <button class="btn bxs" style="background:var(--red);color:#fff" onclick="bulkDeleteProducts()">Delete</button>
+        <button class="btn bg-btn bxs" onclick="toggleSelectAllProducts(false)">Clear</button>
+      </div>
+    </div>
     <div class="plist" id="slist"></div>
   </div>
 </div>
@@ -3082,6 +3097,80 @@ async function getActiveSponsoredProducts(limit){
   return ids.map(id=>pMap[id]).filter(Boolean);
 }
 
+// ══ BULK PRODUCT MANAGEMENT ══
+function getSelectedProductIds(){
+  return Array.from(document.querySelectorAll('.bulk-product-checkbox:checked')).map(cb=>cb.getAttribute('data-product-id'));
+}
+
+function toggleSelectAllProducts(checked){
+  document.querySelectorAll('.bulk-product-checkbox').forEach(cb=>cb.checked=checked);
+  const selectAll=document.getElementById('bulk-select-all');
+  if(selectAll)selectAll.checked=checked;
+  updateBulkActionBar();
+}
+
+function updateBulkActionBar(){
+  const ids=getSelectedProductIds();
+  const bar=document.getElementById('bulk-action-bar');
+  const countEl=document.getElementById('bulk-selected-count');
+  if(!bar)return;
+  if(ids.length>0){
+    bar.style.display='flex';
+    if(countEl)countEl.textContent=ids.length+' selected';
+  } else {
+    bar.style.display='none';
+  }
+  const all=document.querySelectorAll('.bulk-product-checkbox');
+  const selectAll=document.getElementById('bulk-select-all');
+  if(selectAll)selectAll.checked=all.length>0 && ids.length===all.length;
+}
+
+async function bulkSetPublished(published){
+  const ids=getSelectedProductIds();
+  if(!ids.length)return;
+  const res=await sbAuthPost(`/rest/v1/products?id=in.(${ids.join(',')})`,{published},'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not update products');return}
+  showToast(ids.length+' product'+(ids.length===1?'':'s')+' '+(published?'published':'unpublished')+' ✓');
+  DB=[];
+  rSeller();
+}
+
+function bulkDeleteProducts(){
+  const ids=getSelectedProductIds();
+  if(!ids.length)return;
+  const existing=document.getElementById('bulk-delete-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='bulk-delete-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25)">
+      <div style="width:52px;height:52px;background:rgba(220,38,38,0.1);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto 16px">🗑️</div>
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:8px">Delete ${ids.length} product${ids.length===1?'':'s'}?</div>
+      <p style="font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:24px">This permanently removes these listings from the marketplace, along with their reviews and download history. This can't be undone.</p>
+      <button class="btn" style="width:100%;justify-content:center;margin-bottom:10px;background:var(--red);color:#fff" id="bulk-delete-confirm-btn" onclick="executeBulkDelete()">Delete permanently</button>
+      <button class="btn bg-btn" style="width:100%;justify-content:center" onclick="document.getElementById('bulk-delete-modal').remove()">Cancel</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function executeBulkDelete(){
+  const ids=getSelectedProductIds();
+  const btn=document.getElementById('bulk-delete-confirm-btn');
+  if(btn){btn.textContent='Deleting...';btn.disabled=true}
+  if(!ids.length){document.getElementById('bulk-delete-modal')?.remove();return}
+  const res=await sbAuthPost(`/rest/v1/products?id=in.(${ids.join(',')})`,null,'DELETE');
+  if(res&&res.error){
+    showToast(res.error.message||'Could not delete products');
+    if(btn){btn.textContent='Delete permanently';btn.disabled=false}
+    return;
+  }
+  showToast(ids.length+' product'+(ids.length===1?'':'s')+' deleted');
+  document.getElementById('bulk-delete-modal')?.remove();
+  DB=[];
+  rSeller();
+}
+
 // ══ EDIT / DELETE PRODUCT ══
 const EDIT_CATEGORIES=['AI Agents','Automation','Chatbot','Workflow','Prompt Pack','Marketing','Sales','Customer Support','Content Creation','Research','Productivity','Coding','Education','Business','Other'];
 
@@ -4246,6 +4335,7 @@ async function rSeller(){
     const pRv=rvByProduct[p.id];
     const ratingTxt=pRv?'★ '+(pRv.sum/pRv.count).toFixed(1)+' ('+pRv.count+')':'No reviews';
     return `<div class="pi" data-product-id="${p.id}" onclick="goToPurchasedProduct('${p.id}')" style="cursor:pointer">
+    <input type="checkbox" class="bulk-product-checkbox" data-product-id="${p.id}" onclick="event.stopPropagation()" onchange="updateBulkActionBar()" style="width:16px;height:16px;cursor:pointer;flex-shrink:0">
     <div class="pi-thumb" style="background:${gr(p.category)}">${em(p.category)}</div>
     <div class="pi-info">
       <div class="pi-name"><span class="dot ${p.published?'live':'draft'}"></span>${escapeHtml(p.title||'Untitled')}</div>
@@ -4257,6 +4347,8 @@ async function rSeller(){
     </div>
   </div>`;
   }).join('');
+  document.getElementById('bulk-select-all').checked=false;
+  updateBulkActionBar();
 }
 
 // ══ PAYOUTS — itemized transaction history ══
