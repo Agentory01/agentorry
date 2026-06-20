@@ -233,6 +233,33 @@ html[data-theme="dark"] .theme-toggle{box-shadow:0 6px 20px rgba(0,0,0,0.4)}
 .seller-name{font-size:.88rem;font-weight:800;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .seller-stats{display:flex;gap:10px;font-size:.7rem;color:var(--text3);margin-top:6px}
 .seller-stat-n{font-weight:800;color:var(--text2)}
+
+/* ══ AD SLOT BOARD ══ */
+.ad-slot{border-radius:20px;padding:22px 18px;display:flex;flex-direction:column;position:relative;overflow:hidden;transition:all .2s;min-height:220px}
+.ad-slot-open{background:var(--card);border:1.5px dashed rgba(108,99,255,0.35);cursor:pointer}
+.ad-slot-open:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 10px 28px rgba(108,99,255,0.15)}
+.ad-slot-taken{background:var(--card);border:1.5px solid var(--border)}
+.ad-slot-rank{position:absolute;top:14px;left:14px;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff}
+.ad-slot-rank.r1{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
+.ad-slot-rank.r2{background:linear-gradient(135deg,#94a3b8,#cbd5e1)}
+.ad-slot-rank.r3{background:linear-gradient(135deg,#b45309,#d97706)}
+.ad-slot-rank.r4{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.ad-slot-thumb{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:38px auto 10px}
+.ad-slot-title{font-size:.82rem;font-weight:800;color:var(--text);text-align:center;line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ad-slot-owner{font-size:.68rem;color:var(--text3);text-align:center;margin-bottom:10px}
+.ad-slot-countdown{margin-top:auto;text-align:center;font-size:.68rem;font-weight:700;color:var(--accent);background:var(--pale);border-radius:100px;padding:4px 10px}
+.ad-slot-empty-icon{width:44px;height:44px;border-radius:50%;border:1.5px dashed rgba(108,99,255,0.4);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--accent);margin:38px auto 12px}
+.ad-slot-cta{margin-top:auto;text-align:center}
+.ad-slot-price{font-size:1.3rem;font-weight:800;color:var(--text);letter-spacing:-.02em}
+.ad-slot-priceunit{font-size:.66rem;color:var(--text3);margin-bottom:10px}
+
+/* ══ COUPONS ══ */
+.coupon-row{display:flex;align-items:center;gap:14px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:8px}
+.coupon-code{font-family:ui-monospace,monospace;font-size:.85rem;font-weight:800;color:var(--text);background:var(--pale2);padding:4px 10px;border-radius:8px;letter-spacing:.02em}
+.coupon-row.inactive{opacity:.55}
+@media(max-width:680px){
+  #ad-slot-board{grid-template-columns:repeat(2,1fr)!important}
+}
 .hsc::-webkit-scrollbar{display:none}
 .hcrd{flex-shrink:0;width:230px;background:var(--card);border:1.5px solid var(--border);border-radius:18px;overflow:hidden;cursor:pointer;transition:all .25s}
 .hcrd:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 8px 32px rgba(108,99,255,0.12)}
@@ -968,6 +995,14 @@ try{
     <div id="active-campaigns-section" style="display:none;margin-bottom:20px">
       <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Active boosts</div>
       <div id="active-campaigns-list"></div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3)">Coupon codes</div>
+        <button class="btn bp bsm" onclick="openCreateCouponModal()">+ New code</button>
+      </div>
+      <div id="coupons-list"></div>
     </div>
 
     <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Your products</div>
@@ -1727,88 +1762,52 @@ try{
 
 <!-- ═══ ADVERTISE ═══ -->
 <div class="page" id="page-advertise">
-  <div style="max-width:900px;margin:0 auto;padding:60px 28px 80px">
-    
-    <div style="text-align:center;margin-bottom:60px">
-      <div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:10px">For Sellers</div>
-      <h1 style="font-size:clamp(2rem,5vw,3.2rem);font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:14px;line-height:1.15">Get your agent in front<br>of thousands of buyers</h1>
-      <p style="color:var(--text2);font-size:1rem;max-width:480px;margin:0 auto;line-height:1.75">Featured spots put your product at the top of the marketplace — above the organic results, in front of every buyer who visits.</p>
+  <div style="max-width:980px;margin:0 auto;padding:60px 28px 80px">
+
+    <div style="text-align:center;margin-bottom:48px">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:var(--pale);border:1px solid rgba(108,99,255,0.2);border-radius:100px;font-size:.7rem;font-weight:700;color:var(--accent);margin-bottom:16px;letter-spacing:.04em;text-transform:uppercase">⚡ 4 spots only</div>
+      <h1 style="font-size:clamp(2rem,5vw,3.2rem);font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:14px;line-height:1.15">Rank your agent<br>at the top of the marketplace</h1>
+      <p style="color:var(--text2);font-size:1rem;max-width:520px;margin:0 auto;line-height:1.75">Only 4 sponsored spots exist. Higher rank costs more — pick a position, pick how many days, you're live instantly.</p>
     </div>
 
-    <!-- Pricing cards -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:60px">
-      
-      <div style="background:#fff;border:1.5px solid var(--border);border-radius:22px;padding:28px;text-align:center;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)';this.style.boxShadow='0 4px 20px rgba(108,99,255,0.08)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:12px">Starter</div>
-        <div style="font-size:2.5rem;font-weight:800;color:var(--text);letter-spacing:-.04em;margin-bottom:4px">$9</div>
-        <div style="font-size:.8rem;color:var(--text3);margin-bottom:20px">per week</div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;text-align:left">
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Featured in marketplace</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Sponsored badge</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Priority placement</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text3)"><span style="color:var(--border2);font-weight:700">✗</span>Homepage feature</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text3)"><span style="color:var(--border2);font-weight:700">✗</span>Analytics dashboard</div>
-        </div>
-        <button class="btn bp bsm" style="width:100%;justify-content:center" onclick="openBoostModal('starter',9,7)">Get started</button>
-        <div style="position:absolute;top:14px;right:14px;padding:3px 10px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:100px;font-size:.62rem;font-weight:800;color:white">POPULAR</div>
-        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,0.5);margin-bottom:12px">Growth</div>
-        <div style="font-size:2.5rem;font-weight:800;color:white;letter-spacing:-.04em;margin-bottom:4px">$29</div>
-        <div style="font-size:.8rem;color:rgba(255,255,255,0.5);margin-bottom:20px">per week</div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;text-align:left">
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:rgba(255,255,255,0.8)"><span style="color:#4ade80;font-weight:700">✓</span>Featured in marketplace</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:rgba(255,255,255,0.8)"><span style="color:#4ade80;font-weight:700">✓</span>Sponsored badge</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:rgba(255,255,255,0.8)"><span style="color:#4ade80;font-weight:700">✓</span>Priority placement</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:rgba(255,255,255,0.8)"><span style="color:#4ade80;font-weight:700">✓</span>Homepage feature</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:rgba(255,255,255,0.5)"><span style="color:rgba(255,255,255,0.3);font-weight:700">✗</span>Analytics dashboard</div>
-        </div>
-        <button class="btn bw bsm" style="width:100%;justify-content:center" onclick="openBoostModal('growth',29,7)">Get started</button>
+    <!-- LIVE SLOT BOARD -->
+    <div style="margin-bottom:56px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:.95rem;font-weight:800;color:var(--text)">Live slot board</div>
+        <div style="font-size:.74rem;color:var(--text3)">Updates in real time as spots fill or expire</div>
       </div>
-
-      <div style="background:#fff;border:1.5px solid var(--border);border-radius:22px;padding:28px;text-align:center;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)';this.style.boxShadow='0 4px 20px rgba(108,99,255,0.08)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:12px">Pro</div>
-        <div style="font-size:2.5rem;font-weight:800;color:var(--text);letter-spacing:-.04em;margin-bottom:4px">$79</div>
-        <div style="font-size:.8rem;color:var(--text3);margin-bottom:20px">per week</div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;text-align:left">
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Featured in marketplace</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Sponsored badge</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Priority placement</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Homepage feature</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Analytics dashboard</div>
-        </div>
-        <button class="btn bp bsm" style="width:100%;justify-content:center" onclick="openBoostModal('pro',79,7)">Get started</button>
+      <div id="ad-slot-board" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--text3);font-size:.85rem">Loading slots…</div>
       </div>
     </div>
 
     <!-- How it works -->
-    <div style="background:var(--pale);border:1.5px solid rgba(108,99,255,0.15);border-radius:22px;padding:36px;margin-bottom:40px">
-      <h2 style="font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:24px">How it works</h2>
+    <div style="background:var(--pale);border:1.5px solid rgba(108,99,255,0.15);border-radius:22px;padding:36px;margin-bottom:48px">
+      <h2 style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:24px">How ranking works</h2>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
         <div style="text-align:center">
           <div style="width:48px;height:48px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:white;margin:0 auto 12px">1</div>
-          <div style="font-weight:700;color:var(--text);font-size:.88rem;margin-bottom:6px">Choose a plan</div>
-          <div style="font-size:.78rem;color:var(--text2);line-height:1.6">Pick weekly or monthly. Cancel anytime.</div>
+          <div style="font-weight:700;color:var(--text);font-size:.88rem;margin-bottom:6px">Pick an open spot</div>
+          <div style="font-size:.78rem;color:var(--text2);line-height:1.6">Spot #1 ranks highest and costs the most. Spot #4 is the cheapest way in.</div>
         </div>
         <div style="text-align:center">
           <div style="width:48px;height:48px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:white;margin:0 auto 12px">2</div>
-          <div style="font-weight:700;color:var(--text);font-size:.88rem;margin-bottom:6px">Select your product</div>
-          <div style="font-size:.78rem;color:var(--text2);line-height:1.6">Choose which agent to feature from your dashboard.</div>
+          <div style="font-weight:700;color:var(--text);font-size:.88rem;margin-bottom:6px">Choose your duration</div>
+          <div style="font-size:.78rem;color:var(--text2);line-height:1.6">3, 7, 14, or 30 days. Longer runs cost less per day.</div>
         </div>
         <div style="text-align:center">
           <div style="width:48px;height:48px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:800;color:white;margin:0 auto 12px">3</div>
           <div style="font-weight:700;color:var(--text);font-size:.88rem;margin-bottom:6px">Go live instantly</div>
-          <div style="font-size:.78rem;color:var(--text2);line-height:1.6">Your agent appears at the top within minutes.</div>
+          <div style="font-size:.78rem;color:var(--text2);line-height:1.6">Your agent takes that exact position in the sponsored row the moment payment clears.</div>
         </div>
       </div>
     </div>
 
     <!-- CTA -->
     <div style="text-align:center">
-      <h2 style="font-size:1.4rem;font-weight:800;color:var(--text);margin-bottom:10px">Ready to get more eyes on your agent?</h2>
-      <p style="color:var(--text2);margin-bottom:24px">Ads are launching soon. Get in touch to be first in line.</p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <button class="btn bp bl" onclick="showToast('Email us at hello@agentorry.com!')">Contact us →</button>
-        <button class="btn bs bl" onclick="go('marketplace')">Browse marketplace</button>
-      </div>
+      <h2 style="font-size:1.4rem;font-weight:800;color:var(--text);margin-bottom:10px">Spots are first-come, first-served</h2>
+      <p style="color:var(--text2);margin-bottom:24px">Once a spot is taken, it's held until that seller's time runs out. Grab yours early.</p>
+      <button class="btn bs bl" onclick="go('marketplace')">See the marketplace →</button>
     </div>
 
   </div>
@@ -2347,6 +2346,7 @@ function go(n){
   if(n==='messages')rMessages();
   if(n!=='messages'&&realtimeWs){try{realtimeWs.close();realtimeWs=null}catch(e){}}
   if(n==='contact')buildFAQ();
+  if(n==='advertise')renderAdSlotBoard();
 }
 
 // ══ PRODUCT PAGE ══
@@ -2628,7 +2628,10 @@ async function simulatedCheckout(p){
   showCheckoutModal(p);
 }
 
+let activeCoupon=null;
+
 function showCheckoutModal(p){
+  activeCoupon=null;
   const existing=document.getElementById('checkout-modal');
   if(existing)existing.remove();
   const modal=document.createElement('div');
@@ -2638,12 +2641,51 @@ function showCheckoutModal(p){
     <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25)">
       <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--pale);border:1px solid rgba(108,99,255,0.2);border-radius:100px;font-size:.65rem;font-weight:800;color:var(--accent);margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase">🧪 Test checkout — no real charge</div>
       <div style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:6px">${escapeHtml(p.title||'Untitled')}</div>
-      <div style="font-size:1.8rem;font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:18px">$${p.price}</div>
+      <div id="checkout-price-display" style="font-size:1.8rem;font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:6px">$${p.price}</div>
+      <div id="checkout-discount-note" style="min-height:18px;font-size:.75rem;font-weight:700;color:var(--green);margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input class="fi" id="checkout-coupon-input" placeholder="Coupon code (optional)" style="text-transform:uppercase;flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon('${p.user_id}','${p.id}',${p.price})}">
+        <button class="btn bg-btn bsm" style="flex-shrink:0" onclick="applyCoupon('${p.user_id}','${p.id}',${p.price})">Apply</button>
+      </div>
+      <div id="checkout-coupon-error" style="min-height:16px;font-size:.72rem;color:var(--red);text-align:left;margin-bottom:14px"></div>
       <p style="font-size:.8rem;color:var(--text2);line-height:1.6;margin-bottom:24px">Real payments aren't live yet. This simulates a completed purchase so you can test downloads, reviews, and seller notifications.</p>
       <button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="checkout-confirm-btn" onclick="confirmSimulatedPurchase('${p.id}')">Simulate purchase →</button>
       <button class="btn bg-btn" style="width:100%;justify-content:center" onclick="document.getElementById('checkout-modal').remove()">Cancel</button>
     </div>`;
   document.body.appendChild(modal);
+}
+
+async function applyCoupon(sellerId,productId,originalPrice){
+  const input=document.getElementById('checkout-coupon-input');
+  const errEl=document.getElementById('checkout-coupon-error');
+  const code=(input.value||'').trim().toUpperCase();
+  errEl.textContent='';
+  if(!code){activeCoupon=null;updateCheckoutPriceDisplay(originalPrice);return}
+
+  const rows=await sbGet(`/rest/v1/coupons?select=*&seller_id=eq.${sellerId}&code=eq.${encodeURIComponent(code)}`);
+  const coupon=rows&&rows[0];
+  if(!coupon){errEl.textContent='Invalid code for this seller';activeCoupon=null;updateCheckoutPriceDisplay(originalPrice);return}
+  if(!coupon.active){errEl.textContent='This code is no longer active';activeCoupon=null;updateCheckoutPriceDisplay(originalPrice);return}
+  if(coupon.expires_at && new Date(coupon.expires_at).getTime()<Date.now()){errEl.textContent='This code has expired';activeCoupon=null;updateCheckoutPriceDisplay(originalPrice);return}
+  if(coupon.max_uses!==null && coupon.uses_count>=coupon.max_uses){errEl.textContent='This code has reached its usage limit';activeCoupon=null;updateCheckoutPriceDisplay(originalPrice);return}
+
+  activeCoupon=coupon;
+  updateCheckoutPriceDisplay(originalPrice);
+  showToast('Code applied ✓ '+coupon.percent_off+'% off');
+}
+
+function updateCheckoutPriceDisplay(originalPrice){
+  const priceEl=document.getElementById('checkout-price-display');
+  const noteEl=document.getElementById('checkout-discount-note');
+  if(!priceEl)return;
+  if(activeCoupon){
+    const discounted=Math.round(originalPrice*(1-activeCoupon.percent_off/100)*100)/100;
+    priceEl.innerHTML='<span style="text-decoration:line-through;color:var(--text3);font-size:1.1rem;font-weight:600;margin-right:8px">$'+originalPrice+'</span>$'+discounted;
+    if(noteEl)noteEl.textContent=activeCoupon.percent_off+'% off applied — saved $'+(originalPrice-discounted).toFixed(2);
+  } else {
+    priceEl.textContent='$'+originalPrice;
+    if(noteEl)noteEl.textContent='';
+  }
 }
 
 async function confirmSimulatedPurchase(productId){
@@ -2652,13 +2694,25 @@ async function confirmSimulatedPurchase(productId){
   const rows=await sbGet(`/rest/v1/products?select=*&id=eq.${productId}`);
   const p=rows&&rows[0];
   if(!p){showToast('Product not found');document.getElementById('checkout-modal')?.remove();return}
+
+  const originalPrice=p.price||0;
+  const discountAmount=activeCoupon?Math.round(originalPrice*(activeCoupon.percent_off/100)*100)/100:0;
+  const finalAmount=Math.round((originalPrice-discountAmount)*100)/100;
+  // platform fee is always 9% of the ORIGINAL price — coupons never reduce Agentorry's cut
+  const platformFee=Math.round(originalPrice*0.09*100)/100;
+  const sellerPayout=Math.max(0,Math.round((finalAmount-platformFee)*100)/100);
+
   const res=await sbAuthPost('/rest/v1/purchases',{
     user_id:user.id,
     product_id:p.id,
     seller_id:p.user_id,
-    amount:p.price||0,
+    amount:finalAmount,
+    original_price:originalPrice,
+    discount_amount:discountAmount,
+    platform_fee:platformFee,
+    seller_payout:sellerPayout,
     is_simulated:true
-  });
+  },'POST',{'Prefer':'return=representation'});
   if(res&&res.error){
     if(/duplicate|unique/i.test(res.error.message||'')){
       showToast('You already purchased this — opening review');
@@ -2668,65 +2722,263 @@ async function confirmSimulatedPurchase(productId){
       return;
     }
   } else {
-    showToast('Purchase complete ✓ Seller notified');
+    showToast(activeCoupon?('Purchase complete ✓ '+activeCoupon.percent_off+'% off applied'):'Purchase complete ✓ Seller notified');
+    if(activeCoupon && Array.isArray(res) && res[0]){
+      await sbAuthPost('/rest/v1/coupon_redemptions',{
+        coupon_id:activeCoupon.id,
+        buyer_id:user.id,
+        product_id:p.id,
+        purchase_id:res[0].id,
+        discount_amount:discountAmount
+      });
+    }
   }
   document.getElementById('checkout-modal')?.remove();
+  activeCoupon=null;
   myPurchases.add(p.id);
   if(currentReviewProduct&&currentReviewProduct.id===p.id) renderReviewsSection(p);
   showProduct(p);
 }
 
-// ══ AD CAMPAIGNS (simulated boost/sponsored placements) ══
-const AD_PLANS={
-  starter:{label:'Starter',badge:''},
-  growth:{label:'Growth',badge:'Homepage feature'},
-  pro:{label:'Pro',badge:'Homepage + analytics'}
-};
-
-async function openBoostModal(plan,price,days){
-  if(!user){sessionStorage.setItem('redirect','advertise');showToast('Please sign in first');go('login');return}
-  const mine=await sbGet(`/rest/v1/products?select=id,title,category,price,image_url,published&user_id=eq.${user.id}&order=created_at.desc`);
-  const products=Array.isArray(mine)?mine:[];
-  if(!products.length){
-    showToast('Upload a product first to boost it');
-    go('upload');
+// ══ COUPON CODES (seller-managed, store-wide, percentage off) ══
+async function rCoupons(){
+  if(!user)return;
+  const list=document.getElementById('coupons-list');
+  if(!list)return;
+  const rows=await sbGet(`/rest/v1/coupons?select=*&seller_id=eq.${user.id}&order=created_at.desc`);
+  const coupons=Array.isArray(rows)?rows:[];
+  if(!coupons.length){
+    list.innerHTML=`<div style="font-size:.8rem;color:var(--text3);padding:10px 2px">No coupon codes yet — create one to offer a discount across all your products.</div>`;
     return;
   }
+  list.innerHTML=coupons.map(c=>{
+    const expired=c.expires_at && new Date(c.expires_at).getTime()<Date.now();
+    const maxedOut=c.max_uses!==null && c.uses_count>=c.max_uses;
+    const isLive=c.active && !expired && !maxedOut;
+    let statusTxt='Active';
+    if(!c.active)statusTxt='Disabled';
+    else if(expired)statusTxt='Expired';
+    else if(maxedOut)statusTxt='Limit reached';
+    return `<div class="coupon-row${isLive?'':' inactive'}">
+      <span class="coupon-code">${escapeHtml(c.code)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.82rem;font-weight:700;color:var(--text)">${c.percent_off}% off · ${c.uses_count} use${c.uses_count===1?'':'s'}${c.max_uses!==null?' / '+c.max_uses:''}</div>
+        <div style="font-size:.7rem;color:var(--text3)">${statusTxt}${c.expires_at?' · expires '+new Date(c.expires_at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):''}</div>
+      </div>
+      <button class="btn bg-btn bxs" onclick="toggleCoupon('${c.id}',${!c.active})">${c.active?'Disable':'Enable'}</button>
+      <button class="ib del" onclick="deleteCoupon('${c.id}')" title="Delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+    </div>`;
+  }).join('');
+}
 
-  const existing=document.getElementById('boost-modal');
+function openCreateCouponModal(){
+  if(!user)return;
+  const existing=document.getElementById('coupon-modal');
   if(existing)existing.remove();
   const modal=document.createElement('div');
-  modal.id='boost-modal';
+  modal.id='coupon-modal';
   modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-
-  const productOptions=products.map(p=>`<option value="${p.id}" ${!p.published?'disabled':''}>${escapeHtml(p.title||'Untitled')}${!p.published?' (unpublished)':''}</option>`).join('');
-  const planInfo=AD_PLANS[plan];
-
   modal.innerHTML=`
-    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:420px;width:100%;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25);max-height:90vh;overflow-y:auto">
-      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--pale);border:1px solid rgba(108,99,255,0.2);border-radius:100px;font-size:.65rem;font-weight:800;color:var(--accent);margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase">🧪 Test mode — no real charge</div>
-      <div style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:4px">Boost — ${planInfo.label} plan</div>
-      <div style="font-size:1.8rem;font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:18px">$${price} <span style="font-size:.85rem;font-weight:600;color:var(--text3)">/ ${days} days</span></div>
-      <div class="fg"><label class="fl">Which product?</label><select class="fi" id="boost-product-select">${productOptions}</select></div>
-      <p style="font-size:.78rem;color:var(--text2);line-height:1.6;margin-bottom:20px">Your product appears in the Sponsored row on the marketplace${plan!=='starter'?' and homepage':''} for ${days} days, starting immediately after checkout.</p>
-      <button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="boost-confirm-btn" onclick="confirmBoost('${plan}',${price},${days})">Simulate payment & go live →</button>
-      <button class="btn bg-btn" style="width:100%;justify-content:center" onclick="document.getElementById('boost-modal').remove()">Cancel</button>
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:400px;width:100%;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25);max-height:90vh;overflow-y:auto">
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:18px">New coupon code</div>
+      <div class="fg"><label class="fl">Code</label><input class="fi" id="coupon-code-input" placeholder="SUMMER20" style="text-transform:uppercase" maxlength="20"></div>
+      <div class="fg"><label class="fl">Discount</label><div style="position:relative"><input class="fi" id="coupon-percent-input" type="number" min="1" max="90" placeholder="20" style="padding-right:34px"><span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:.85rem;color:var(--text3);font-weight:700">%</span></div></div>
+      <div class="fg"><label class="fl">Max uses (optional)</label><input class="fi" id="coupon-maxuses-input" type="number" min="1" placeholder="Unlimited"></div>
+      <div class="fg"><label class="fl">Expires on (optional)</label><input class="fi" id="coupon-expires-input" type="date"></div>
+      <p style="font-size:.76rem;color:var(--text3);margin-bottom:18px">Applies to every product in your store. Buyers enter this code at checkout.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn bp" style="flex:1;justify-content:center" id="coupon-save-btn" onclick="createCoupon()">Create code</button>
+        <button class="btn bg-btn" onclick="document.getElementById('coupon-modal').remove()">Cancel</button>
+      </div>
     </div>`;
   document.body.appendChild(modal);
 }
 
-async function confirmBoost(plan,price,days){
-  const btn=document.getElementById('boost-confirm-btn');
+async function createCoupon(){
+  const btn=document.getElementById('coupon-save-btn');
+  const code=(document.getElementById('coupon-code-input').value||'').trim().toUpperCase();
+  const percent=parseInt(document.getElementById('coupon-percent-input').value);
+  const maxUsesRaw=document.getElementById('coupon-maxuses-input').value;
+  const expiresRaw=document.getElementById('coupon-expires-input').value;
+
+  if(!code||code.length<3){showToast('Enter a code (at least 3 characters)');return}
+  if(!percent||percent<1||percent>90){showToast('Discount must be between 1% and 90%');return}
+
+  if(btn){btn.textContent='Creating...';btn.disabled=true}
+  const row={
+    seller_id:user.id,
+    code,
+    percent_off:percent,
+    max_uses:maxUsesRaw?parseInt(maxUsesRaw):null,
+    expires_at:expiresRaw?new Date(expiresRaw+'T23:59:59').toISOString():null
+  };
+  const res=await sbAuthPost('/rest/v1/coupons',row);
+  if(res&&res.error){
+    showToast(/duplicate|unique/i.test(res.error.message||'')?'You already have a code with that name':(res.error.message||'Could not create code'));
+    if(btn){btn.textContent='Create code';btn.disabled=false}
+    return;
+  }
+  showToast('Coupon code created ✓');
+  document.getElementById('coupon-modal')?.remove();
+  rCoupons();
+}
+
+async function toggleCoupon(id,newActive){
+  const res=await sbAuthPost(`/rest/v1/coupons?id=eq.${id}`,{active:newActive},'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not update code');return}
+  rCoupons();
+}
+
+async function deleteCoupon(id){
+  const res=await sbAuthPost(`/rest/v1/coupons?id=eq.${id}`,null,'DELETE');
+  if(res&&res.error){showToast(res.error.message||'Could not delete code');return}
+  showToast('Coupon deleted');
+  rCoupons();
+}
+
+// ══ AD CAMPAIGNS — slot-based ranked ads (simulated payment, no real processor) ══
+const AD_SLOTS=[
+  {slot:1,basePrice:49,label:'#1'},
+  {slot:2,basePrice:35,label:'#2'},
+  {slot:3,basePrice:25,label:'#3'},
+  {slot:4,basePrice:15,label:'#4'}
+];
+const AD_DURATIONS=[
+  {days:3,mult:1},
+  {days:7,mult:2.2},
+  {days:14,mult:4},
+  {days:30,mult:7.5}
+];
+
+async function getActiveCampaignsBySlot(){
+  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=*&status=eq.active&order=ends_at.desc`);
+  const rows=Array.isArray(campaigns)?campaigns:[];
+  const now=Date.now();
+  const live=rows.filter(c=>new Date(c.ends_at).getTime()>now);
+  const bySlot={};
+  live.forEach(c=>{ if(!bySlot[c.slot]||new Date(c.ends_at)>new Date(bySlot[c.slot].ends_at)) bySlot[c.slot]=c; });
+  return bySlot;
+}
+
+async function renderAdSlotBoard(){
+  const board=document.getElementById('ad-slot-board');
+  if(!board)return;
+  board.innerHTML=AD_SLOTS.map(()=>'<div style="height:220px;border-radius:20px;background:var(--pale2)"></div>').join('');
+
+  const bySlot=await getActiveCampaignsBySlot();
+  const takenProductIds=Object.values(bySlot).map(c=>c.product_id);
+  let prodMap={};
+  if(takenProductIds.length){
+    const products=await sbGet(`/rest/v1/products?select=id,title,category,image_url,user_id&id=in.(${takenProductIds.join(',')})`);
+    (products||[]).forEach(p=>prodMap[p.id]=p);
+  }
+  const ownerIds=[...new Set(Object.values(prodMap).map(p=>p.user_id))];
+  let profMap={};
+  if(ownerIds.length){
+    const profiles=await sbGet(`/rest/v1/profiles?select=id,username,full_name&id=in.(${ownerIds.join(',')})`);
+    (profiles||[]).forEach(pr=>profMap[pr.id]=pr);
+  }
+
+  board.innerHTML=AD_SLOTS.map(s=>{
+    const campaign=bySlot[s.slot];
+    if(campaign){
+      const p=prodMap[campaign.product_id];
+      const owner=p?profMap[p.user_id]:null;
+      const ownerName=owner?(owner.full_name||owner.username||'Creator'):'Creator';
+      const daysLeft=Math.max(1,Math.ceil((new Date(campaign.ends_at).getTime()-Date.now())/86400000));
+      const imgHtml=p&&p.image_url?'<img src="'+p.image_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:11px">':em(p?p.category:'');
+      return `<div class="ad-slot ad-slot-taken">
+        <div class="ad-slot-rank r${s.slot}">${s.label}</div>
+        <div class="ad-slot-thumb" style="background:${p?gr(p.category):'var(--pale)'}">${imgHtml}</div>
+        <div class="ad-slot-title">${escapeHtml(p?.title||'Sponsored')}</div>
+        <div class="ad-slot-owner">by ${escapeHtml(ownerName)}</div>
+        <div class="ad-slot-countdown">${daysLeft} day${daysLeft===1?'':'s'} left</div>
+      </div>`;
+    } else {
+      return `<div class="ad-slot ad-slot-open" onclick="openSlotModal(${s.slot})">
+        <div class="ad-slot-rank r${s.slot}">${s.label}</div>
+        <div class="ad-slot-empty-icon">+</div>
+        <div class="ad-slot-cta">
+          <div class="ad-slot-price">$${s.basePrice}</div>
+          <div class="ad-slot-priceunit">starting · 3 days</div>
+          <button class="btn bp bsm" style="width:100%;justify-content:center;margin-top:4px">Claim spot →</button>
+        </div>
+      </div>`;
+    }
+  }).join('');
+}
+
+async function openSlotModal(slot){
+  if(!user){sessionStorage.setItem('redirect','advertise');showToast('Please sign in first');go('login');return}
+  const mine=await sbGet(`/rest/v1/products?select=id,title,category,price,image_url,published&user_id=eq.${user.id}&order=created_at.desc`);
+  const products=Array.isArray(mine)?mine:[];
+  if(!products.length){
+    showToast('Upload a product first to feature it');
+    go('upload');
+    return;
+  }
+
+  const slotInfo=AD_SLOTS.find(s=>s.slot===slot);
+  const existing=document.getElementById('slot-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='slot-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+
+  const productOptions=products.map(p=>`<option value="${p.id}" ${!p.published?'disabled':''}>${escapeHtml(p.title||'Untitled')}${!p.published?' (unpublished)':''}</option>`).join('');
+  const durationOptions=AD_DURATIONS.map(d=>`<option value="${d.days}">${d.days} days — $${Math.round(slotInfo.basePrice*d.mult)}</option>`).join('');
+
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:420px;width:100%;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25);max-height:90vh;overflow-y:auto">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--pale);border:1px solid rgba(108,99,255,0.2);border-radius:100px;font-size:.65rem;font-weight:800;color:var(--accent);margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase">🧪 Test mode — no real charge</div>
+      <div style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:4px">Claim spot ${slotInfo.label}</div>
+      <div style="font-size:.82rem;color:var(--text3);margin-bottom:20px">Rank ${slotInfo.label} in the marketplace sponsored row</div>
+      <div class="fg"><label class="fl">Which product?</label><select class="fi" id="slot-product-select">${productOptions}</select></div>
+      <div class="fg"><label class="fl">Duration</label><select class="fi" id="slot-duration-select" onchange="updateSlotPrice(${slot})">${durationOptions}</select></div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:14px 16px;background:var(--pale2);border-radius:12px;margin-bottom:20px">
+        <span style="font-size:.8rem;color:var(--text2);font-weight:600">Total</span>
+        <span style="font-size:1.6rem;font-weight:800;color:var(--text);letter-spacing:-.02em" id="slot-price-display">$${slotInfo.basePrice}</span>
+      </div>
+      <button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="slot-confirm-btn" onclick="confirmSlot(${slot})">Simulate payment & go live →</button>
+      <button class="btn bg-btn" style="width:100%;justify-content:center" onclick="document.getElementById('slot-modal').remove()">Cancel</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function updateSlotPrice(slot){
+  const slotInfo=AD_SLOTS.find(s=>s.slot===slot);
+  const days=parseInt(document.getElementById('slot-duration-select').value);
+  const dur=AD_DURATIONS.find(d=>d.days===days);
+  const price=Math.round(slotInfo.basePrice*dur.mult);
+  document.getElementById('slot-price-display').textContent='$'+price;
+}
+
+async function confirmSlot(slot){
+  const btn=document.getElementById('slot-confirm-btn');
   if(btn){btn.textContent='Processing...';btn.disabled=true}
-  const productId=document.getElementById('boost-product-select').value;
+  const productId=document.getElementById('slot-product-select').value;
+  const days=parseInt(document.getElementById('slot-duration-select').value);
   if(!productId){showToast('Select a product');if(btn){btn.textContent='Simulate payment & go live →';btn.disabled=false}return}
 
+  // re-check the slot is still free right before purchase (avoid race with another seller)
+  const bySlot=await getActiveCampaignsBySlot();
+  if(bySlot[slot]){
+    showToast('That spot was just taken — pick another');
+    document.getElementById('slot-modal')?.remove();
+    renderAdSlotBoard();
+    return;
+  }
+
+  const slotInfo=AD_SLOTS.find(s=>s.slot===slot);
+  const dur=AD_DURATIONS.find(d=>d.days===days);
+  const price=Math.round(slotInfo.basePrice*dur.mult);
   const now=new Date();
   const ends=new Date(now.getTime()+days*86400000);
+
   const res=await sbAuthPost('/rest/v1/ad_campaigns',{
     user_id:user.id,
     product_id:productId,
-    plan,
+    slot,
     amount:price,
     duration_days:days,
     starts_at:now.toISOString(),
@@ -2734,12 +2986,13 @@ async function confirmBoost(plan,price,days){
     is_simulated:true
   });
   if(res&&res.error){
-    showToast(res.error.message||'Could not start campaign');
+    showToast(res.error.message||'Could not claim that spot');
     if(btn){btn.textContent='Simulate payment & go live →';btn.disabled=false}
     return;
   }
-  showToast('🎉 Your product is now featured!');
-  document.getElementById('boost-modal')?.remove();
+  showToast('🎉 You\'re now ranked '+slotInfo.label+' in the marketplace!');
+  document.getElementById('slot-modal')?.remove();
+  renderAdSlotBoard();
   go('seller');
 }
 
@@ -2749,7 +3002,7 @@ async function renderActiveCampaigns(){
   const list=document.getElementById('active-campaigns-list');
   if(!section||!list)return;
 
-  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=*&user_id=eq.${user.id}&status=eq.active&order=ends_at.desc`);
+  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=*&user_id=eq.${user.id}&status=eq.active&order=slot.asc`);
   const rows=Array.isArray(campaigns)?campaigns:[];
   const now=Date.now();
   const live=rows.filter(c=>new Date(c.ends_at).getTime()>now);
@@ -2764,28 +3017,29 @@ async function renderActiveCampaigns(){
   list.innerHTML=live.map(c=>{
     const p=pMap[c.product_id];
     const daysLeft=Math.max(0,Math.ceil((new Date(c.ends_at).getTime()-now)/86400000));
-    const planInfo=AD_PLANS[c.plan]||{label:c.plan};
     return `<div style="display:flex;align-items:center;gap:14px;background:var(--card);border:1.5px solid rgba(108,99,255,0.2);border-radius:14px;padding:14px 18px;margin-bottom:8px">
+      <div class="ad-slot-rank r${c.slot}" style="position:static;width:32px;height:32px;font-size:.72rem;flex-shrink:0">#${c.slot}</div>
       <div style="width:38px;height:38px;border-radius:10px;background:${p?gr(p.category):'var(--pale)'};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">${p?em(p.category):'⚡'}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:.85rem;font-weight:700;color:var(--text)">${escapeHtml(p?.title||'Product')}</div>
-        <div style="font-size:.72rem;color:var(--text3)">${planInfo.label} plan · ${daysLeft} day${daysLeft===1?'':'s'} left</div>
+        <div style="font-size:.72rem;color:var(--text3)">Rank #${c.slot} · ${daysLeft} day${daysLeft===1?'':'s'} left</div>
       </div>
       <span class="sponsored-badge">⚡ Live</span>
     </div>`;
   }).join('');
 }
 
-// Fetch currently-active campaign products, used to populate sponsored slots
+// Fetch currently-active campaign products ranked by slot, used to populate sponsored slots elsewhere
 async function getActiveSponsoredProducts(limit){
-  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=product_id,plan,ends_at&status=eq.active&order=created_at.desc`);
-  const rows=Array.isArray(campaigns)?campaigns:[];
-  const now=Date.now();
-  const liveProductIds=[...new Set(rows.filter(c=>new Date(c.ends_at).getTime()>now).map(c=>c.product_id))];
-  if(!liveProductIds.length)return[];
-  const ids=liveProductIds.slice(0,limit||6);
+  const bySlot=await getActiveCampaignsBySlot();
+  const ordered=AD_SLOTS.map(s=>bySlot[s.slot]).filter(Boolean);
+  const ids=ordered.map(c=>c.product_id).slice(0,limit||4);
+  if(!ids.length)return[];
   const products=await sbGet(`/rest/v1/products?select=*&id=in.(${ids.join(',')})&published=eq.true`);
-  return Array.isArray(products)?products:[];
+  const list=Array.isArray(products)?products:[];
+  // preserve slot ranking order
+  const pMap={};list.forEach(p=>pMap[p.id]=p);
+  return ids.map(id=>pMap[id]).filter(Boolean);
 }
 
 // ══ EDIT / DELETE PRODUCT ══
@@ -3260,7 +3514,8 @@ async function renderHomeSponsored(){
   const row=document.getElementById('home-sponsored-row');
   if(!wrap||!row)return;
 
-  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=product_id,plan,ends_at&status=eq.active&plan=in.(growth,pro)&order=created_at.desc`);
+  // homepage feature is reserved for the top 2 ranks (#1 and #2)
+  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=product_id,slot,ends_at&status=eq.active&slot=in.(1,2)&order=slot.asc`);
   const rows=Array.isArray(campaigns)?campaigns:[];
   const now=Date.now();
   const liveIds=[...new Set(rows.filter(c=>new Date(c.ends_at).getTime()>now).map(c=>c.product_id))];
@@ -3899,6 +4154,7 @@ async function rSeller(){
   document.getElementById('s-live').textContent=mine.filter(p=>p.published).length;
 
   renderActiveCampaigns();
+  rCoupons();
 
   const list=document.getElementById('slist');
   if(!mine.length){
@@ -3916,17 +4172,20 @@ async function rSeller(){
 
   const [downloads,purchases,reviews]=await Promise.all([
     sbGet(`/rest/v1/downloads?select=product_id,created_at&product_id=in.(${idList})`),
-    sbGet(`/rest/v1/purchases?select=product_id,amount,created_at&seller_id=eq.${user.id}&status=eq.completed`),
+    sbGet(`/rest/v1/purchases?select=product_id,amount,seller_payout,platform_fee,created_at&seller_id=eq.${user.id}&status=eq.completed`),
     sbGet(`/rest/v1/reviews?select=product_id,rating&product_id=in.(${idList})`)
   ]);
   const dl=Array.isArray(downloads)?downloads:[];
   const pu=Array.isArray(purchases)?purchases:[];
   const rv=Array.isArray(reviews)?reviews:[];
 
-  const totalRevenue=pu.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  const totalPayout=pu.reduce((s,x)=>{
+    const payout=(x.seller_payout!==null&&x.seller_payout!==undefined)?parseFloat(x.seller_payout):(parseFloat(x.amount)||0)*0.91;
+    return s+(payout||0);
+  },0);
   document.getElementById('s-downloads').textContent=dl.length;
   document.getElementById('s-sales').textContent=pu.length;
-  document.getElementById('s-revenue').textContent='$'+totalRevenue.toFixed(2).replace(/\.00$/,'');
+  document.getElementById('s-revenue').textContent='$'+totalPayout.toFixed(2).replace(/\.00$/,'');
   document.getElementById('s-rating').textContent=rv.length?(rv.reduce((s,r)=>s+r.rating,0)/rv.length).toFixed(1):'—';
 
   renderAnalyticsChart(dl,pu);
