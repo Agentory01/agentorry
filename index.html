@@ -1134,6 +1134,16 @@ try{
       </div>
     </div>
     <div id="admin-reports-list"></div>
+
+    <div style="margin-top:36px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div>
+          <h2 style="font-size:1.2rem;font-weight:800;color:var(--text)">Seller verification</h2>
+          <p style="font-size:.8rem;color:var(--text3)">Sellers who hit the eligibility bar — approve to grant the verified badge</p>
+        </div>
+      </div>
+      <div id="admin-verification-list"></div>
+    </div>
   </div>
 </div>
 
@@ -2419,7 +2429,7 @@ function go(n){
   if(n==='profile'&&user){rProfile()}
   if(n==='purchases'&&user){rPurchases()}
   if(n==='wishlist'&&user){rWishlist()}
-  if(n==='admin-reports')rAdminReports();
+  if(n==='admin-reports'){rAdminReports();rAdminVerification();}
   if(n==='messages')rMessages();
   if(n!=='messages'&&realtimeWs){try{realtimeWs.close();realtimeWs=null}catch(e){}}
   if(n==='contact')buildFAQ();
@@ -2444,6 +2454,10 @@ async function showProduct(p){
   const priceHtml = price===0 ? 'Free' : '$'+price;
   const priceClass = price===0 ? 'pp-price free' : 'pp-price';
   const subText = price===0 ? 'Free to download' : 'One-time purchase';
+
+  let sellerVerified=false;
+  const sellerProfRows=await sbGet(`/rest/v1/profiles?select=verified&id=eq.${p.user_id}`);
+  if(Array.isArray(sellerProfRows)&&sellerProfRows[0])sellerVerified=!!sellerProfRows[0].verified;
 
   let alreadyPurchased=false;
   if(user && !isMine && price>0){
@@ -2480,7 +2494,7 @@ async function showProduct(p){
         '<div class="pp-creator">'+
           '<div class="pp-av">'+(creator[0]||'C').toUpperCase()+'</div>'+
           '<div>'+
-            '<div style="font-size:.82rem;font-weight:700;color:var(--text)">'+creator+'</div>'+
+            '<div style="font-size:.82rem;font-weight:700;color:var(--text)">'+creator+verifiedBadgeHtml(sellerVerified)+'</div>'+
             '<div style="font-size:.7rem;color:var(--text3)" id="pp-follower-count">Creator</div>'+
           '</div>'+
           (isMine?'':'<button class="follow-btn" id="pp-follow-btn" onclick="toggleFollow(\''+p.user_id+'\')"><span class="fb-default">+ Follow</span></button>')+
@@ -3664,6 +3678,11 @@ async function submitReport(productId){
 
 // ══ ADMIN: REPORTS DASHBOARD ══
 function isAdmin(){return user&&user.id===ADMIN_UID}
+function verifiedBadgeHtml(isVerified,size){
+  if(!isVerified)return '';
+  const s=size||'13';
+  return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block;vertical-align:-2px;color:var(--accent);margin-left:3px" title="Verified seller"><path d="M12 2l2.4 1.7 2.9-.3 1 2.8 2.6 1.5-.6 2.9 1.6 2.4-1.6 2.4.6 2.9-2.6 1.5-1 2.8-2.9-.3L12 22l-2.4-1.7-2.9.3-1-2.8-2.6-1.5.6-2.9L2.1 12l1.6-2.4-.6-2.9 2.6-1.5 1-2.8 2.9.3z"/><path d="M9 12l2 2 4-4"/></svg>';
+}
 
 async function rAdminReports(){
   if(!isAdmin()){go('home');return}
@@ -3726,6 +3745,112 @@ async function updateReportStatus(reportId,status){
   if(res&&res.error){showToast(res.error.message||'Could not update report');return}
   showToast('Report updated');
   rAdminReports();
+}
+
+// ══ ADMIN: SELLER VERIFICATION ══
+const VERIFICATION_MIN_SALES=5;
+const VERIFICATION_MIN_RATING=4;
+
+async function rAdminVerification(){
+  if(!isAdmin())return;
+  const list=document.getElementById('admin-verification-list');
+  if(!list)return;
+  list.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:.82rem">Checking seller eligibility…</div>';
+
+  const [products,purchases,reviews,bundlePurchases,verifiedProfiles]=await Promise.all([
+    sbGet('/rest/v1/products?select=id,user_id'),
+    sbGet('/rest/v1/purchases?select=product_id,seller_id&status=eq.completed'),
+    sbGet('/rest/v1/reviews?select=product_id,rating'),
+    sbGet('/rest/v1/bundle_purchases?select=seller_id&status=eq.completed'),
+    sbGet('/rest/v1/profiles?select=id,username,full_name,verified&verified=eq.true')
+  ]);
+  const prods=Array.isArray(products)?products:[];
+  const pus=Array.isArray(purchases)?purchases:[];
+  const revs=Array.isArray(reviews)?reviews:[];
+  const bpus=Array.isArray(bundlePurchases)?bundlePurchases:[];
+  const alreadyVerified=Array.isArray(verifiedProfiles)?verifiedProfiles:[];
+
+  const prodToSeller={};
+  prods.forEach(p=>prodToSeller[p.id]=p.user_id);
+
+  const sellerSales={},sellerRatingSum={},sellerRatingCount={};
+  pus.forEach(pu=>{const s=pu.seller_id||prodToSeller[pu.product_id];if(s)sellerSales[s]=(sellerSales[s]||0)+1});
+  bpus.forEach(bp=>{if(bp.seller_id)sellerSales[bp.seller_id]=(sellerSales[bp.seller_id]||0)+1});
+  revs.forEach(r=>{
+    const s=prodToSeller[r.product_id];
+    if(!s)return;
+    sellerRatingSum[s]=(sellerRatingSum[s]||0)+r.rating;
+    sellerRatingCount[s]=(sellerRatingCount[s]||0)+1;
+  });
+
+  const verifiedIds=new Set(alreadyVerified.map(p=>p.id));
+  const candidateIds=Object.keys(sellerSales).filter(id=>{
+    const sales=sellerSales[id]||0;
+    const avgRating=sellerRatingCount[id]?sellerRatingSum[id]/sellerRatingCount[id]:0;
+    return sales>=VERIFICATION_MIN_SALES && avgRating>=VERIFICATION_MIN_RATING && !verifiedIds.has(id);
+  });
+
+  const allRelevantIds=[...new Set([...candidateIds,...alreadyVerified.map(p=>p.id)])];
+  let profMap={};
+  if(candidateIds.length){
+    const profs=await sbGet(`/rest/v1/profiles?select=id,username,full_name&id=in.(${candidateIds.join(',')})`);
+    (profs||[]).forEach(pr=>profMap[pr.id]=pr);
+  }
+  alreadyVerified.forEach(pr=>profMap[pr.id]=pr);
+
+  let html='';
+
+  if(candidateIds.length){
+    html+='<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px">Eligible for verification</div>';
+    html+=candidateIds.map(id=>{
+      const prof=profMap[id]||{};
+      const name=prof.full_name||prof.username||'Seller';
+      const sales=sellerSales[id]||0;
+      const avgRating=sellerRatingCount[id]?(sellerRatingSum[id]/sellerRatingCount[id]).toFixed(1):'—';
+      return `<div style="display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid rgba(108,99,255,0.25);border-radius:14px;padding:14px 18px;margin-bottom:8px">
+        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:.85rem;flex-shrink:0">${(name[0]||'S').toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.85rem;font-weight:700;color:var(--text)">${escapeHtml(name)}</div>
+          <div style="font-size:.72rem;color:var(--text3)">${sales} sales · ★ ${avgRating} avg rating</div>
+        </div>
+        <button class="btn bxs" style="background:var(--accent);color:#fff" onclick="grantVerification('${id}')">Approve ✓</button>
+      </div>`;
+    }).join('');
+  }
+
+  if(alreadyVerified.length){
+    html+='<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:18px 0 8px">Currently verified</div>';
+    html+=alreadyVerified.map(pr=>{
+      const name=pr.full_name||pr.username||'Seller';
+      return `<div style="display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:8px">
+        <div style="width:38px;height:38px;border-radius:10px;background:var(--pale);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--accent);font-size:.85rem;flex-shrink:0">${(name[0]||'S').toUpperCase()}</div>
+        <div style="flex:1;min-width:0;display:flex;align-items:center">
+          <span style="font-size:.85rem;font-weight:700;color:var(--text)">${escapeHtml(name)}</span>${verifiedBadgeHtml(true,'14')}
+        </div>
+        <button class="btn bg-btn bxs" onclick="revokeVerification('${pr.id}')">Revoke</button>
+      </div>`;
+    }).join('');
+  }
+
+  if(!html){
+    list.innerHTML=es('✓','No eligible sellers yet','Sellers need '+VERIFICATION_MIN_SALES+'+ sales and a '+VERIFICATION_MIN_RATING+'+ star average to qualify',"go('admin-reports')");
+    return;
+  }
+  list.innerHTML=html;
+}
+
+async function grantVerification(sellerId){
+  const res=await sbAuthPost(`/rest/v1/profiles?id=eq.${sellerId}`,{verified:true,verified_at:new Date().toISOString()},'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not verify seller');return}
+  showToast('Seller verified ✓');
+  rAdminVerification();
+}
+
+async function revokeVerification(sellerId){
+  const res=await sbAuthPost(`/rest/v1/profiles?id=eq.${sellerId}`,{verified:false},'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not update seller');return}
+  showToast('Verification revoked');
+  rAdminVerification();
 }
 
 async function renderReviewsSection(p){
@@ -4054,7 +4179,7 @@ async function renderTopSellers(){
     sbGet(`/rest/v1/downloads?select=product_id&product_id=in.(${idList})`),
     sbGet(`/rest/v1/purchases?select=product_id,amount&product_id=in.(${idList})&status=eq.completed`),
     sbGet(`/rest/v1/reviews?select=product_id,rating&product_id=in.(${idList})`),
-    sbGet(`/rest/v1/profiles?select=id,username,full_name&id=in.(${sellerIds.join(',')})`)
+    sbGet(`/rest/v1/profiles?select=id,username,full_name,verified&id=in.(${sellerIds.join(',')})`)
   ]);
 
   const prodToSeller={};
@@ -4071,7 +4196,7 @@ async function renderTopSellers(){
   const ranked=sellerIds.map(id=>{
     const s=sellerStats[id];
     const score=s.downloads*1 + s.sales*4 + s.ratingSum;
-    return {id,...s,score,name:(profMap[id]&&(profMap[id].full_name||profMap[id].username))||'Creator'};
+    return {id,...s,score,name:(profMap[id]&&(profMap[id].full_name||profMap[id].username))||'Creator',verified:!!(profMap[id]&&profMap[id].verified)};
   }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,6);
 
   if(!ranked.length){if(section)section.style.display='none';return}
@@ -4082,7 +4207,7 @@ async function renderTopSellers(){
     return `<div class="seller-card" onclick="viewSellerProducts('${s.id}','${escapeHtml(s.name).replace(/'/g,"\\'")}')">
       <div class="seller-rank">#${i+1}</div>
       <div class="seller-av">${(s.name[0]||'C').toUpperCase()}</div>
-      <div class="seller-name">${escapeHtml(s.name)}</div>
+      <div class="seller-name">${escapeHtml(s.name)}${verifiedBadgeHtml(s.verified)}</div>
       <div style="font-size:.7rem;color:var(--text3)">${s.products} product${s.products===1?'':'s'}</div>
       <div class="seller-stats">
         <span>${s.downloads+s.sales} <span class="seller-stat-n" style="display:none"></span>activity</span>
@@ -4187,7 +4312,8 @@ async function rProfile(){
   document.getElementById('pu').value=p.username||'';
   document.getElementById('pn').value=p.full_name||'';
   document.getElementById('pb').value=p.bio||'';
-  if(p.full_name||p.username)document.getElementById('pname-display').textContent=p.full_name||p.username;
+  const displayName=p.full_name||p.username||user.email||'Your profile';
+  document.getElementById('pname-display').innerHTML=escapeHtml(displayName)+verifiedBadgeHtml(!!p.verified,'15');
   if(p.username||p.full_name)document.getElementById('pav').textContent=((p.full_name||p.username)[0]||'U').toUpperCase();
 }
 async function saveProfile(){
