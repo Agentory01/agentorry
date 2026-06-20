@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agentorry — The #1 AI Agent Marketplace</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236c63ff'/%3E%3Cstop offset='100%25' stop-color='%238b85ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23g)'/%3E%3Cpolygon points='56,18 24,54 46,54 42,84 78,42 52,42 56,18' fill='white'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236c63ff'/%3E%3Cstop offset='100%25' stop-color='%238b85ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23g)'/%3E%3Cpolygon points='63,18 27,62 49,62 45,90 87,46 58,46 63,18' fill='white'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -49,6 +49,27 @@ nav.sc{box-shadow:0 2px 20px rgba(108,99,255,0.08)}
 .nb-s{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 14px rgba(108,99,255,0.3)}
 .nb-s:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(108,99,255,0.4)}
 .nav-av{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:800;color:#fff;cursor:pointer}
+
+/* ══ MOBILE NAV ══ */
+.nm-burger{display:none;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px;background:transparent;border:none;cursor:pointer;flex-shrink:0;padding:0}
+.nm-burger span{display:block;width:20px;height:2px;background:var(--text);border-radius:2px;margin:0 auto;transition:all .25s}
+.nm-burger.on span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.nm-burger.on span:nth-child(2){opacity:0}
+.nm-burger.on span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.nm-overlay{display:none;position:fixed;inset:0;background:rgba(10,10,20,0.4);z-index:198;opacity:0;pointer-events:none;transition:opacity .25s}
+.nm-overlay.on{opacity:1;pointer-events:auto}
+.nm-menu{display:none;position:fixed;top:62px;left:0;right:0;background:#fff;z-index:199;flex-direction:column;padding:10px 20px 24px;box-shadow:0 12px 30px rgba(20,20,40,0.12);transform:translateY(-12px);opacity:0;pointer-events:none;transition:all .25s;max-height:calc(100vh - 62px);overflow-y:auto}
+.nm-menu.on{transform:translateY(0);opacity:1;pointer-events:auto}
+.nm-link{padding:14px 6px;font-size:1rem;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border)}
+.nm-link.on{color:var(--accent)}
+.nm-divider{height:1px;background:var(--border);margin:14px 0}
+.nm-actions{display:flex;flex-direction:column;gap:10px}
+
+@media(max-width:880px){
+  .nr{display:none}
+  .nm-burger{display:flex}
+  .nm-overlay,.nm-menu{display:flex}
+}
 
 /* ══ PAGES ══ */
 .page{display:none;padding-top:62px;min-height:100vh;position:relative;z-index:1}
@@ -365,10 +386,23 @@ footer{background:#fff;border-top:1px solid var(--border);padding:50px 28px 28px
   .ed-grid{grid-template-columns:1fr}
   .ft-top{grid-template-columns:1fr 1fr;gap:24px}
   .sband-inner{grid-template-columns:repeat(2,1fr)}
+  nav{padding:0 16px}
+  .dw{padding:24px 18px 60px}
+  .uw{padding:24px 18px 60px}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .hero{padding:80px 18px 48px}
 }
 @media(max-width:560px){
   .why-grid,.how-grid{grid-template-columns:1fr}
   .ft-top{grid-template-columns:1fr}
+  .hbtns{flex-direction:column;width:100%}
+  .hbtns .btn{width:100%;justify-content:center}
+  .toast{left:14px;right:14px;bottom:14px;text-align:center}
+  .pc{padding:24px 20px;max-width:100%}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .sg{grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px}
+  .dh{flex-direction:column;align-items:stretch}
+  .dh>div:last-child{width:100%}
 }
 </style>
 </head>
@@ -382,7 +416,7 @@ footer{background:#fff;border-top:1px solid var(--border);padding:50px 28px 28px
 <!-- NAV -->
 <nav id="nav">
   <div class="logo" onclick="go('home')">
-    <div class="lm"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+    <div class="lm"><svg viewBox="0 0 24 24"><polygon points="13,2 4,13 11,13 10,22 20,10 13,10"/></svg></div>
     Agentorry
   </div>
   <div class="nc">
@@ -395,7 +429,22 @@ footer{background:#fff;border-top:1px solid var(--border);padding:50px 28px 28px
     <button class="nb nb-g" onclick="go('login')">Sign in</button>
     <button class="nb nb-s" onclick="go('signup')">Get started →</button>
   </div>
+  <button class="nm-burger" id="nm-burger" onclick="toggleMobileMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+<div class="nm-overlay" id="nm-overlay" onclick="toggleMobileMenu()"></div>
+<div class="nm-menu" id="nm-menu">
+  <span class="nm-link on" id="m-t-home" onclick="go('home');tab('home');toggleMobileMenu()">Discover</span>
+  <span class="nm-link" id="m-t-marketplace" onclick="go('marketplace');tab('marketplace');toggleMobileMenu()">Browse</span>
+  <span class="nm-link" id="m-t-upload" onclick="go('upload');tab('upload');toggleMobileMenu()">Sell</span>
+  <span class="nm-link" id="m-t-blog" onclick="go('blog');tab('blog');toggleMobileMenu()">Blog</span>
+  <div class="nm-divider"></div>
+  <div class="nm-actions" id="nm-actions">
+    <button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('login');toggleMobileMenu()">Sign in</button>
+    <button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('signup');toggleMobileMenu()">Get started →</button>
+  </div>
+</div>
 
 <!-- ═══ HOME ═══ -->
 <div class="page on" id="page-home">
@@ -530,7 +579,7 @@ footer{background:#fff;border-top:1px solid var(--border);padding:50px 28px 28px
     <div class="footer-inner">
       <div class="ft-top">
         <div>
-          <div class="ft-logo"><div class="lm" style="width:28px;height:28px;border-radius:8px"><svg viewBox="0 0 24 24" style="width:12px;height:12px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>Agentorry</div>
+          <div class="ft-logo"><div class="lm" style="width:28px;height:28px;border-radius:8px"><svg viewBox="0 0 24 24" style="width:12px;height:12px"><polygon points="13,2 4,13 11,13 10,22 20,10 13,10"/></svg></div>Agentorry</div>
           <p class="ft-desc">The world's marketplace for AI agents, automations, and AI-powered tools.</p>
           <div class="ft-soc">
             <div class="fsc" onclick="window.open('https://x.com/agentorry01','_blank')" title="X"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text2)"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.26 5.632L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></div>
@@ -593,7 +642,7 @@ footer{background:#fff;border-top:1px solid var(--border);padding:50px 28px 28px
 <!-- ═══ AUTH ═══ -->
 <div class="page" id="page-login">
   <div class="auth-page"><div class="auth-card">
-    <div class="auth-logo"><div class="lm" style="width:44px;height:44px;border-radius:14px"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div></div>
+    <div class="auth-logo"><div class="lm" style="width:44px;height:44px;border-radius:14px"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><polygon points="13,2 4,13 11,13 10,22 20,10 13,10"/></svg></div></div>
     <div class="auth-title">Welcome back</div><div class="auth-sub">Sign in to your Agentorry account</div>
     <div class="err" id="lerr"></div>
     <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="le" placeholder="you@example.com"></div>
@@ -607,7 +656,7 @@ footer{background:#fff;border-top:1px solid var(--border);padding:50px 28px 28px
 
 <div class="page" id="page-signup">
   <div class="auth-page"><div class="auth-card">
-    <div class="auth-logo"><div class="lm" style="width:44px;height:44px;border-radius:14px"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div></div>
+    <div class="auth-logo"><div class="lm" style="width:44px;height:44px;border-radius:14px"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><polygon points="13,2 4,13 11,13 10,22 20,10 13,10"/></svg></div></div>
     <div class="auth-title">Create account</div><div class="auth-sub">Join the AI marketplace — free to join</div>
     <div class="fg"><label class="fl">Username</label><input class="fi" id="suu" placeholder="yourname"></div>
     <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="sue" placeholder="you@example.com"></div>
@@ -2036,12 +2085,29 @@ function showToast(m){const t=document.getElementById('toast');t.textContent=m;t
 function showErr(id,m){const e=document.getElementById(id);if(e){e.textContent=m;e.style.display='block'}}
 
 window.addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('sc',window.scrollY>10));
-function tab(n){document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));const el=document.getElementById('t-'+n);if(el)el.classList.add('on')}
+function tab(n){document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));const el=document.getElementById('t-'+n);if(el)el.classList.add('on');document.querySelectorAll('.nm-link').forEach(t=>t.classList.remove('on'));const me=document.getElementById('m-t-'+n);if(me)me.classList.add('on')}
 function updateNav(){
   const r=document.getElementById('nav-r');
   r.innerHTML=user
     ?`<button class="nb nb-g" onclick="go('upload')">↑ Upload</button><div class="nav-av" onclick="go('profile')">${(user.email||'U')[0].toUpperCase()}</div>`
     :`<button class="nb nb-g" onclick="go('login')">Sign in</button><button class="nb nb-s" onclick="go('signup')">Get started →</button>`;
+  const ma=document.getElementById('nm-actions');
+  if(ma){
+    ma.innerHTML=user
+      ?`<button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('upload');toggleMobileMenu()">↑ Upload</button><button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('profile');toggleMobileMenu()">Profile</button>`
+      :`<button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('login');toggleMobileMenu()">Sign in</button><button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('signup');toggleMobileMenu()">Get started →</button>`;
+  }
+}
+
+function toggleMobileMenu(){
+  const burger=document.getElementById('nm-burger');
+  const overlay=document.getElementById('nm-overlay');
+  const menu=document.getElementById('nm-menu');
+  const isOpen=menu.classList.contains('on');
+  burger.classList.toggle('on',!isOpen);
+  overlay.classList.toggle('on',!isOpen);
+  menu.classList.toggle('on',!isOpen);
+  document.body.style.overflow=isOpen?'':'hidden';
 }
 
 // ══ PAGES ══
