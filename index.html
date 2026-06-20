@@ -1757,8 +1757,8 @@ try{
 
     <div style="background:var(--pale);border:1.5px solid rgba(108,99,255,0.15);border-radius:18px;padding:24px;margin-bottom:32px;text-align:center">
       <div style="font-size:1.4rem;margin-bottom:8px">💬</div>
-      <div style="font-weight:700;color:var(--text);margin-bottom:6px">Reviews coming soon</div>
-      <p style="font-size:.82rem;color:var(--text2)">Be one of the first buyers on Agentorry and leave the first reviews.</p>
+      <div style="font-weight:700;color:var(--text);margin-bottom:6px">Reviews are live</div>
+      <p style="font-size:.82rem;color:var(--text2)">Download a free product and leave the first review. Reviews on paid products unlock once checkout ships.</p>
       <button class="btn bp bsm" style="margin-top:14px" onclick="go('marketplace')">Browse marketplace →</button>
     </div>
 
@@ -2126,7 +2126,9 @@ function authHeaders(extra){
 // Insert/update rows as the logged-in user (respects Row Level Security)
 async function sbAuthPost(path,body,method,extraHeaders){
   try{
-    const r=await fetch(SB+path,{method:method||'POST',headers:authHeaders(Object.assign({'Prefer':'return=representation'},extraHeaders||{})),body:JSON.stringify(body)});
+    const opts={method:method||'POST',headers:authHeaders(Object.assign({'Prefer':'return=representation'},extraHeaders||{}))};
+    if(body!==null && body!==undefined) opts.body=JSON.stringify(body);
+    const r=await fetch(SB+path,opts);
     const d=await r.json().catch(()=>null);
     if(!r.ok)return{error:d||{message:'Request failed'}};
     return d;
@@ -2147,7 +2149,7 @@ async function sbUpload(bucket,path,file){
 }
 
 // ══ STATE ══
-let user=null,mpCat='',uImg=null,uZip=null,DB=[];
+let user=null,mpCat='',uImg=null,uZip=null,DB=[],RATINGS={};
 
 const CATS=[{e:'🤖',l:'AI Agents'},{e:'⚡',l:'Automation'},{e:'💬',l:'Chatbot'},{e:'🔄',l:'Workflow'},{e:'💻',l:'Coding'},{e:'📈',l:'Marketing'},{e:'🔬',l:'Research'},{e:'💡',l:'Prompt Pack'},{e:'💰',l:'Sales'},{e:'🚀',l:'Productivity'}];
 const GRADS=['linear-gradient(135deg,#1e1b4b,#312e81)','linear-gradient(135deg,#052e16,#14532d)','linear-gradient(135deg,#1c0535,#2d0f4e)','linear-gradient(135deg,#0a1628,#1e3a5f)','linear-gradient(135deg,#1a0a2e,#2d1b69)','linear-gradient(135deg,#0f2027,#203a43)','linear-gradient(135deg,#1a0a00,#3d1a00)','linear-gradient(135deg,#0c1a0c,#1a3a1a)'];
@@ -2253,10 +2255,12 @@ function showProduct(p){
             '<div style="font-size:.7rem;color:var(--text3)">Creator</div>'+
           '</div>'+
         '</div>'+
+        '<div id="pp-rating-summary" style="margin-bottom:18px"></div>'+
         '<div class="pp-img" style="background:'+gr(cat)+';margin-bottom:24px">'+imgHtml+'</div>'+
         '<div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">About this product</div>'+
         '<div class="pp-desc">'+escapeHtml(p.description||'No description provided.').replace(/\n/g,'<br>')+'</div>'+
         fwHtml+
+        '<div id="pp-reviews-section" style="margin-top:32px"></div>'+
       '</div>'+
       '<div>'+
         '<div class="pp-buy">'+
@@ -2279,7 +2283,7 @@ function showProduct(p){
   if(mainBtnEl){
     mainBtnEl.onclick = function(){
       if(isMine){ go('seller'); }
-      else if(price===0){ showToast('Download coming soon!'); }
+      else if(price===0){ downloadFree(p); }
       else { showToast('Checkout coming soon!'); }
     };
   }
@@ -2288,7 +2292,190 @@ function showProduct(p){
     msgBtnEl.onclick = function(){ messageSeller(p.user_id, p.id, p.title||''); };
   }
 
+  renderReviewsSection(p);
   go('product');
+}
+
+// ══ RATINGS ══
+async function loadRatings(productIds){
+  if(!productIds || !productIds.length) return;
+  const ids=productIds.filter(id=>!(id in RATINGS));
+  if(!ids.length) return;
+  const rows=await sbGet(`/rest/v1/reviews?select=product_id,rating&product_id=in.(${ids.join(',')})`);
+  const grouped={};
+  (rows||[]).forEach(r=>{
+    if(!grouped[r.product_id])grouped[r.product_id]={sum:0,count:0};
+    grouped[r.product_id].sum+=r.rating;
+    grouped[r.product_id].count+=1;
+  });
+  ids.forEach(id=>{
+    const g=grouped[id];
+    RATINGS[id]=g?{avg:g.sum/g.count,count:g.count}:{avg:0,count:0};
+  });
+}
+function starsHtml(avg,size){
+  size=size||'.7rem';
+  let s='';
+  for(let i=1;i<=5;i++){
+    const filled=i<=Math.round(avg);
+    s+='<span style="font-size:'+size+';color:'+(filled?'#f59e0b':'var(--border2)')+'">★</span>';
+  }
+  return s;
+}
+function ratingBadge(productId){
+  const r=RATINGS[productId];
+  if(!r||r.count===0)return '<span style="font-size:.68rem;color:var(--text3);font-weight:600">No reviews yet</span>';
+  return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:.7rem;font-weight:700;color:var(--text2)">'+starsHtml(r.avg,'.72rem')+'<span style="margin-left:2px">'+r.avg.toFixed(1)+'</span><span style="color:var(--text3);font-weight:600">('+r.count+')</span></span>';
+}
+
+// ══ REVIEWS ══
+let currentReviewProduct=null, currentReviewRating=0, myDownloads=new Set();
+
+async function downloadFree(p){
+  if(!user){sessionStorage.setItem('redirect','product');showToast('Please sign in first');go('login');return}
+  showToast('Preparing download…');
+  const res=await sbAuthPost('/rest/v1/downloads',{user_id:user.id,product_id:p.id},'POST',{'Prefer':'return=representation,resolution=merge-duplicates'});
+  if(res&&res.error){
+    // unique constraint = already downloaded, that's fine, treat as success
+    if(!/duplicate|unique/i.test(res.error.message||'')){
+      showToast('Could not start download — try again');
+      return;
+    }
+  }
+  myDownloads.add(p.id);
+  showToast('Download started — you can now leave a review ✓');
+  renderReviewsSection(p);
+}
+
+async function renderReviewsSection(p){
+  const container=document.getElementById('pp-reviews-section');
+  const summaryEl=document.getElementById('pp-rating-summary');
+  if(!container)return;
+  container.innerHTML='<div style="font-size:.78rem;color:var(--text3)">Loading reviews…</div>';
+
+  const reviews=await sbGet(`/rest/v1/reviews?select=*&product_id=eq.${p.id}&order=created_at.desc`);
+  const list=Array.isArray(reviews)?reviews:[];
+
+  // rating summary (above image)
+  if(summaryEl){
+    if(list.length){
+      const avg=list.reduce((s,r)=>s+r.rating,0)/list.length;
+      summaryEl.innerHTML='<div style="display:flex;align-items:center;gap:8px">'+starsHtml(avg,'1rem')+'<span style="font-size:.9rem;font-weight:800;color:var(--text)">'+avg.toFixed(1)+'</span><span style="font-size:.78rem;color:var(--text3)">('+list.length+' review'+(list.length===1?'':'s')+')</span></div>';
+    } else {
+      summaryEl.innerHTML='<div style="font-size:.78rem;color:var(--text3);font-weight:600">No reviews yet — be the first</div>';
+    }
+  }
+
+  // fetch reviewer profile names
+  const userIds=[...new Set(list.map(r=>r.user_id))];
+  let profiles=[];
+  if(userIds.length) profiles=await sbGet(`/rest/v1/profiles?select=id,username,full_name&id=in.(${userIds.join(',')})`);
+  const pMap={}; (profiles||[]).forEach(pr=>pMap[pr.id]=pr);
+
+  const isMine = user && p.user_id === user.id;
+  const myReview = user ? list.find(r=>r.user_id===user.id) : null;
+
+  // Determine eligibility: logged in, not own product, no existing review, and has a qualifying download (free products only for now)
+  let canReview=false;
+  if(user && !isMine && !myReview){
+    if((p.price||0)===0){
+      if(!myDownloads.has(p.id)){
+        const d=await sbGet(`/rest/v1/downloads?select=id&user_id=eq.${user.id}&product_id=eq.${p.id}`);
+        if(Array.isArray(d)&&d.length) myDownloads.add(p.id);
+      }
+      canReview=myDownloads.has(p.id);
+    }
+    // paid products: not reviewable until checkout/purchases exist
+  }
+
+  let formHtml='';
+  if(myReview){
+    formHtml='<div style="padding:16px 18px;background:var(--pale);border:1.5px solid rgba(108,99,255,0.15);border-radius:14px;margin-bottom:20px;font-size:.82rem;color:var(--text2)">You already reviewed this product. <span style="color:var(--accent);font-weight:700;cursor:pointer" onclick="deleteMyReview(\''+p.id+'\')">Remove my review</span></div>';
+  } else if(canReview){
+    formHtml=reviewFormHtml(p.id);
+  } else if(user && !isMine && (p.price||0)>0){
+    formHtml='<div style="padding:14px 18px;background:var(--pale2);border:1.5px solid var(--border);border-radius:14px;margin-bottom:20px;font-size:.8rem;color:var(--text3)">Reviews open to verified buyers once checkout is live.</div>';
+  } else if(!user){
+    formHtml='<div style="padding:14px 18px;background:var(--pale2);border:1.5px solid var(--border);border-radius:14px;margin-bottom:20px;font-size:.8rem;color:var(--text3)"><span style="color:var(--accent);font-weight:700;cursor:pointer" onclick="go(\'login\')">Sign in</span> to leave a review.</div>';
+  }
+
+  const reviewCards=list.length
+    ? list.map(r=>reviewCardHtml(r,pMap[r.user_id])).join('')
+    : '<div style="font-size:.82rem;color:var(--text3);padding:8px 0">No reviews yet for this product.</div>';
+
+  container.innerHTML=
+    '<div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:14px">Reviews</div>'
+    +formHtml
+    +'<div style="display:flex;flex-direction:column;gap:12px">'+reviewCards+'</div>';
+
+  currentReviewProduct=p;
+}
+
+function reviewFormHtml(productId){
+  return '<div style="padding:18px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;margin-bottom:20px">'
+    +'<div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:10px">Leave a review</div>'
+    +'<div id="review-star-picker" style="display:flex;gap:4px;margin-bottom:12px;cursor:pointer">'+[1,2,3,4,5].map(i=>'<span class="review-star" data-val="'+i+'" onclick="setReviewStar('+i+')" style="font-size:1.4rem;color:var(--border2);transition:color .15s">★</span>').join('')+'</div>'
+    +'<textarea class="fi" id="review-comment" rows="3" placeholder="Share your experience with this product (optional)" style="resize:vertical;margin-bottom:12px"></textarea>'
+    +'<button class="btn bp bsm" id="review-submit-btn" onclick="submitReview(\''+productId+'\')">Submit review</button>'
+    +'</div>';
+}
+
+function setReviewStar(val){
+  currentReviewRating=val;
+  document.querySelectorAll('.review-star').forEach(function(el){
+    const v=parseInt(el.getAttribute('data-val'));
+    el.style.color = v<=val ? '#f59e0b' : 'var(--border2)';
+  });
+}
+
+function reviewCardHtml(r,profile){
+  const name=(profile&&(profile.full_name||profile.username))||'Anonymous';
+  const initial=(name[0]||'U').toUpperCase();
+  const date=new Date(r.created_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+  const mine = user && r.user_id===user.id;
+  return '<div style="padding:16px 18px;background:var(--card);border:1.5px solid var(--border);border-radius:14px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      +'<div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#fff;flex-shrink:0">'+initial+'</div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:.82rem;font-weight:700;color:var(--text)">'+escapeHtml(name)+'</div>'
+        +'<div style="display:flex;align-items:center;gap:6px">'+starsHtml(r.rating,'.7rem')+'<span style="font-size:.68rem;color:var(--text3)">'+date+'</span></div>'
+      +'</div>'
+      +(mine?'<span style="font-size:.7rem;color:var(--red);cursor:pointer;font-weight:700;flex-shrink:0" onclick="deleteMyReview(\''+r.product_id+'\')">Delete</span>':'')
+    +'</div>'
+    +(r.comment?'<div style="font-size:.82rem;color:var(--text2);line-height:1.6">'+escapeHtml(r.comment)+'</div>':'')
+  +'</div>';
+}
+
+async function submitReview(productId){
+  if(!user){showToast('Please sign in first');return}
+  if(!currentReviewRating){showToast('Pick a star rating first');return}
+  const btn=document.getElementById('review-submit-btn');
+  const comment=(document.getElementById('review-comment')||{}).value||'';
+  if(btn){btn.textContent='Submitting...';btn.disabled=true}
+  const res=await sbAuthPost('/rest/v1/reviews',{
+    user_id:user.id,
+    product_id:productId,
+    rating:currentReviewRating,
+    comment:comment.trim()||null
+  });
+  if(res&&res.error){
+    showToast(res.error.message&&res.error.message.includes('row-level')?'You need to download this product first':(res.error.message||'Could not submit review'));
+    if(btn){btn.textContent='Submit review';btn.disabled=false}
+    return;
+  }
+  showToast('Review posted ✓');
+  currentReviewRating=0;
+  delete RATINGS[productId];
+  if(currentReviewProduct) renderReviewsSection(currentReviewProduct);
+}
+
+async function deleteMyReview(productId){
+  if(!user)return;
+  const res=await sbAuthPost(`/rest/v1/reviews?user_id=eq.${user.id}&product_id=eq.${productId}`,null,'DELETE');
+  if(res&&res.error){showToast(res.error.message||'Could not delete review');return}
+  showToast('Review removed');
+  delete RATINGS[productId];
+  if(currentReviewProduct) renderReviewsSection(currentReviewProduct);
 }
 
 function pcard(p){
@@ -2302,6 +2489,7 @@ function pcard(p){
     +'<div class="pcard-body">'
       +'<div class="pcard-title">'+(p.title||'Untitled')+'</div>'
       +'<div class="pcard-desc">'+(p.description||'')+'</div>'
+      +'<div style="margin-bottom:8px">'+ratingBadge(p.id)+'</div>'
       +'<div class="pcard-foot">'
         +'<div><div class="pcard-price '+(price===0?'free':'')+'">'+(price===0?'Free':'$'+price)+'</div><div class="pcard-creator">by '+creator+'</div></div>'
         +'<button class="ib pcard-msg-btn" data-product-id="'+pid+'" title="Message seller"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>'
@@ -2342,6 +2530,7 @@ function hcard(p){
       +'<div class="hcrd-cat">'+cat+'</div>'
       +'<div class="hcrd-title">'+(p.title||'Untitled')+'</div>'
       +'<div class="hcrd-desc">'+(p.description||'')+'</div>'
+      +'<div style="margin:4px 0 2px">'+ratingBadge(p.id)+'</div>'
       +'<div class="hcrd-foot">'
         +'<div class="hcrd-price '+(price===0?'free':'')+'">'+(price===0?'Free':'$'+price)+'</div>'
         +'<button class="hcrd-get">View →</button>'
@@ -2379,6 +2568,7 @@ async function renderHome(){
   const newWeek=document.getElementById('new-week');
   if(DB.length){
     const eight=DB.slice(0,8);
+    await loadRatings(eight.map(p=>p.id));
     const cards=eight.map(hcard).join('');
     newWeek.innerHTML=cards+cards+cards+cards;
     bindProductCardEvents(newWeek, eight);
@@ -2406,6 +2596,7 @@ async function rmp(){
   if(sort==='price_desc')prods.sort((a,b)=>(b.price||0)-(a.price||0));
   document.getElementById('mp-c').textContent=prods.length+' products available';
   const mpg=document.getElementById('mpg');
+  if(prods.length) await loadRatings(prods.map(p=>p.id));
   mpg.innerHTML=prods.length
     ?prods.map(pcard).join('')
     :`<div style="grid-column:1/-1">${es('🔍','No products found','Try different keywords or clear filters',"rmp()")}</div>`;
