@@ -889,9 +889,23 @@ try{
     <div class="sg">
       <div class="sc2"><div class="sc2-n" id="s-tot">0</div><div class="sc2-l">Products</div></div>
       <div class="sc2"><div class="sc2-n" id="s-live">0</div><div class="sc2-l">Published</div></div>
-      <div class="sc2"><div class="sc2-n" id="s-draft">0</div><div class="sc2-l">Drafts</div></div>
-      <div class="sc2"><div class="sc2-n">$0</div><div class="sc2-l">Revenue</div></div>
+      <div class="sc2"><div class="sc2-n" id="s-downloads">0</div><div class="sc2-l">Downloads</div></div>
+      <div class="sc2"><div class="sc2-n" id="s-sales">0</div><div class="sc2-l">Sales</div></div>
+      <div class="sc2"><div class="sc2-n" id="s-revenue">$0</div><div class="sc2-l">Revenue</div></div>
+      <div class="sc2"><div class="sc2-n" id="s-rating">—</div><div class="sc2-l">Avg Rating</div></div>
     </div>
+
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:20px 22px 8px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:.85rem;font-weight:800;color:var(--text)">Activity — last 30 days</div>
+        <div style="display:flex;gap:14px;font-size:.7rem;font-weight:700">
+          <span style="display:flex;align-items:center;gap:5px;color:var(--text2)"><span style="width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block"></span>Downloads</span>
+          <span style="display:flex;align-items:center;gap:5px;color:var(--text2)"><span style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block"></span>Sales</span>
+        </div>
+      </div>
+      <svg id="analytics-chart" viewBox="0 0 700 180" style="width:100%;height:auto;display:block"></svg>
+    </div>
+
     <!-- AD BANNER FOR SELLERS -->
     <div style="background:linear-gradient(135deg,rgba(108,99,255,0.08),rgba(139,92,246,0.05));border:1.5px solid rgba(108,99,255,0.2);border-radius:18px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;cursor:pointer" onclick="go('advertise')">
       <div style="width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">⚡</div>
@@ -902,6 +916,7 @@ try{
       <button class="btn bp bsm" style="flex-shrink:0" onclick="event.stopPropagation();go('advertise')">Boost your agent →</button>
     </div>
 
+    <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Your products</div>
     <div class="plist" id="slist"></div>
   </div>
 </div>
@@ -3188,19 +3203,120 @@ async function rSeller(){
   const mine=await sbGet(`/rest/v1/products?select=*&user_id=eq.${user.id}&order=created_at.desc`);
   document.getElementById('s-tot').textContent=mine.length;
   document.getElementById('s-live').textContent=mine.filter(p=>p.published).length;
-  document.getElementById('s-draft').textContent=mine.filter(p=>!p.published).length;
+
   const list=document.getElementById('slist');
-  if(!mine.length){list.innerHTML=es('📦','No products yet','Upload your first AI agent to start selling',"go('upload')");return}
-  list.innerHTML=mine.map(p=>`<div class="pi">
+  if(!mine.length){
+    list.innerHTML=es('📦','No products yet','Upload your first AI agent to start selling',"go('upload')");
+    document.getElementById('s-downloads').textContent='0';
+    document.getElementById('s-sales').textContent='0';
+    document.getElementById('s-revenue').textContent='$0';
+    document.getElementById('s-rating').textContent='—';
+    renderAnalyticsChart([],[]);
+    return;
+  }
+
+  const productIds=mine.map(p=>p.id);
+  const idList=productIds.join(',');
+
+  const [downloads,purchases,reviews]=await Promise.all([
+    sbGet(`/rest/v1/downloads?select=product_id,created_at&product_id=in.(${idList})`),
+    sbGet(`/rest/v1/purchases?select=product_id,amount,created_at&seller_id=eq.${user.id}&status=eq.completed`),
+    sbGet(`/rest/v1/reviews?select=product_id,rating&product_id=in.(${idList})`)
+  ]);
+  const dl=Array.isArray(downloads)?downloads:[];
+  const pu=Array.isArray(purchases)?purchases:[];
+  const rv=Array.isArray(reviews)?reviews:[];
+
+  const totalRevenue=pu.reduce((s,x)=>s+(parseFloat(x.amount)||0),0);
+  document.getElementById('s-downloads').textContent=dl.length;
+  document.getElementById('s-sales').textContent=pu.length;
+  document.getElementById('s-revenue').textContent='$'+totalRevenue.toFixed(2).replace(/\.00$/,'');
+  document.getElementById('s-rating').textContent=rv.length?(rv.reduce((s,r)=>s+r.rating,0)/rv.length).toFixed(1):'—';
+
+  renderAnalyticsChart(dl,pu);
+
+  // per-product breakdown
+  const dlByProduct={},puByProduct={},rvByProduct={};
+  dl.forEach(d=>dlByProduct[d.product_id]=(dlByProduct[d.product_id]||0)+1);
+  pu.forEach(p=>puByProduct[p.product_id]=(puByProduct[p.product_id]||0)+1);
+  rv.forEach(r=>{
+    if(!rvByProduct[r.product_id])rvByProduct[r.product_id]={sum:0,count:0};
+    rvByProduct[r.product_id].sum+=r.rating;
+    rvByProduct[r.product_id].count+=1;
+  });
+
+  list.innerHTML=mine.map(p=>{
+    const pDl=dlByProduct[p.id]||0;
+    const pPu=puByProduct[p.id]||0;
+    const pRv=rvByProduct[p.id];
+    const ratingTxt=pRv?'★ '+(pRv.sum/pRv.count).toFixed(1)+' ('+pRv.count+')':'No reviews';
+    return `<div class="pi" data-product-id="${p.id}" onclick="goToPurchasedProduct('${p.id}')" style="cursor:pointer">
     <div class="pi-thumb" style="background:${gr(p.category)}">${em(p.category)}</div>
     <div class="pi-info">
-      <div class="pi-name"><span class="dot ${p.published?'live':'draft'}"></span>${p.title}</div>
-      <div class="pi-meta"><span>${p.category||'—'}</span><span>${(p.price||0)===0?'Free':'$'+p.price}</span><span>${p.published?'Published':'Draft'}</span></div>
+      <div class="pi-name"><span class="dot ${p.published?'live':'draft'}"></span>${escapeHtml(p.title||'Untitled')}</div>
+      <div class="pi-meta"><span>${p.category||'—'}</span><span>${(p.price||0)===0?'Free':'$'+p.price}</span><span>${pDl} downloads</span><span>${pPu} sales</span><span>${ratingTxt}</span></div>
     </div>
     <div class="pi-acts">
-      <button class="ib del" onclick="showToast('Delete coming soon!')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+      <button class="ib del" onclick="event.stopPropagation();showToast('Delete coming soon!')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
     </div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
+}
+
+function renderAnalyticsChart(downloads,purchases){
+  const svg=document.getElementById('analytics-chart');
+  if(!svg)return;
+  const days=30;
+  const now=new Date();
+  const buckets=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(now);
+    d.setDate(d.getDate()-i);
+    d.setHours(0,0,0,0);
+    buckets.push({date:d,dl:0,sale:0});
+  }
+  function bucketFor(dateStr){
+    const d=new Date(dateStr);
+    d.setHours(0,0,0,0);
+    return buckets.find(b=>b.date.getTime()===d.getTime());
+  }
+  downloads.forEach(d=>{const b=bucketFor(d.created_at);if(b)b.dl++});
+  purchases.forEach(p=>{const b=bucketFor(p.created_at);if(b)b.sale++});
+
+  const W=700,H=180,padL=10,padR=10,padT=10,padB=24;
+  const chartW=W-padL-padR, chartH=H-padT-padB;
+  const maxVal=Math.max(1,...buckets.map(b=>Math.max(b.dl,b.sale)));
+  const stepX=chartW/(days-1);
+
+  function pathFor(key){
+    return buckets.map((b,i)=>{
+      const x=padL+i*stepX;
+      const y=padT+chartH-(b[key]/maxVal)*chartH;
+      return (i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1);
+    }).join(' ');
+  }
+
+  const hasData=downloads.length>0||purchases.length>0;
+  const gridLines=[0,0.5,1].map(f=>{
+    const y=padT+chartH*(1-f);
+    return `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+  }).join('');
+
+  const labelStep=Math.ceil(days/6);
+  const labels=buckets.map((b,i)=>{
+    if(i%labelStep!==0 && i!==days-1)return '';
+    const x=padL+i*stepX;
+    const txt=b.date.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    return `<text x="${x}" y="${H-6}" font-size="9" fill="var(--text3)" text-anchor="middle">${txt}</text>`;
+  }).join('');
+
+  svg.innerHTML=`
+    ${gridLines}
+    <path d="${pathFor('dl')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${pathFor('sale')}" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${labels}
+    ${!hasData?`<text x="${W/2}" y="${H/2-6}" font-size="12" fill="var(--text3)" text-anchor="middle">No activity yet</text>`:''}
+  `;
 }
 
 async function rPurchases(){
