@@ -259,6 +259,7 @@ html[data-theme="dark"] .theme-toggle{box-shadow:0 6px 20px rgba(0,0,0,0.4)}
 .coupon-row.inactive{opacity:.55}
 .payout-row{cursor:pointer;transition:background .15s}
 .payout-row:hover{background:var(--pale2)}
+.refund-row{background:var(--card);border:1.5px solid rgba(245,158,11,0.3);border-radius:14px;padding:14px 18px;margin-bottom:8px}
 @media(max-width:680px){
   #ad-slot-board{grid-template-columns:repeat(2,1fr)!important}
 }
@@ -997,6 +998,11 @@ try{
     <div id="active-campaigns-section" style="display:none;margin-bottom:20px">
       <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Active boosts</div>
       <div id="active-campaigns-list"></div>
+    </div>
+
+    <div id="refund-requests-section" style="display:none;margin-bottom:20px">
+      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Refund requests</div>
+      <div id="refund-requests-list"></div>
     </div>
 
     <div style="margin-bottom:20px">
@@ -3084,6 +3090,58 @@ async function renderActiveCampaigns(){
   }).join('');
 }
 
+// ══ REFUND REQUESTS (seller side: approve/deny) ══
+async function renderRefundRequests(){
+  if(!user)return;
+  const section=document.getElementById('refund-requests-section');
+  const list=document.getElementById('refund-requests-list');
+  if(!section||!list)return;
+
+  const requests=await sbGet(`/rest/v1/refund_requests?select=*&seller_id=eq.${user.id}&status=eq.pending&order=created_at.desc`);
+  const rows=Array.isArray(requests)?requests:[];
+
+  if(!rows.length){section.style.display='none';return}
+  section.style.display='block';
+
+  const productIds=[...new Set(rows.map(r=>r.product_id))];
+  const buyerIds=[...new Set(rows.map(r=>r.buyer_id))];
+  const [products,profiles]=await Promise.all([
+    sbGet(`/rest/v1/products?select=id,title,category&id=in.(${productIds.join(',')})`),
+    sbGet(`/rest/v1/profiles?select=id,username,full_name&id=in.(${buyerIds.join(',')})`)
+  ]);
+  const pMap={};(products||[]).forEach(p=>pMap[p.id]=p);
+  const profMap={};(profiles||[]).forEach(pr=>profMap[pr.id]=pr);
+
+  list.innerHTML=rows.map(r=>{
+    const p=pMap[r.product_id];
+    const buyer=profMap[r.buyer_id];
+    const buyerName=buyer?(buyer.full_name||buyer.username||'Buyer'):'Buyer';
+    const date=new Date(r.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    return `<div class="refund-row">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:.85rem;font-weight:800;color:var(--text)">${escapeHtml(p?.title||'(deleted product)')}</div>
+          <div style="font-size:.72rem;color:var(--text3)">Requested by ${escapeHtml(buyerName)} · ${date}</div>
+        </div>
+        <span style="font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:3px 10px;border-radius:100px;background:rgba(245,158,11,0.12);color:var(--amber);flex-shrink:0">Pending</span>
+      </div>
+      <div style="font-size:.8rem;color:var(--text2);background:var(--pale2);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5">${escapeHtml(r.reason)}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn bxs" style="background:var(--green);color:#fff" onclick="resolveRefundRequest('${r.id}','approved')">Approve refund</button>
+        <button class="btn bg-btn bxs" onclick="resolveRefundRequest('${r.id}','denied')">Deny</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function resolveRefundRequest(id,status){
+  const res=await sbAuthPost(`/rest/v1/refund_requests?id=eq.${id}`,{status,resolved_at:new Date().toISOString()},'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not update request');return}
+  showToast(status==='approved'?'Refund approved':'Refund denied');
+  renderRefundRequests();
+  rSeller();
+}
+
 // Fetch currently-active campaign products ranked by slot, used to populate sponsored slots elsewhere
 async function getActiveSponsoredProducts(limit){
   const bySlot=await getActiveCampaignsBySlot();
@@ -4284,6 +4342,7 @@ async function rSeller(){
 
   renderActiveCampaigns();
   rCoupons();
+  renderRefundRequests();
 
   const list=document.getElementById('slist');
   if(!mine.length){
@@ -4475,20 +4534,93 @@ async function rPurchases(){
     return;
   }
   const productIds=list.map(pu=>pu.product_id);
-  const products=await sbGet(`/rest/v1/products?select=*&id=in.(${productIds.join(',')})`);
+  const purchaseIds=list.map(pu=>pu.id);
+  const [products,refundReqs]=await Promise.all([
+    sbGet(`/rest/v1/products?select=*&id=in.(${productIds.join(',')})`),
+    sbGet(`/rest/v1/refund_requests?select=*&purchase_id=in.(${purchaseIds.join(',')})`)
+  ]);
   const pMap={}; (products||[]).forEach(p=>pMap[p.id]=p);
+  const refundMap={}; (refundReqs||[]).forEach(r=>refundMap[r.purchase_id]=r);
+
+  const refundStatusBadge={
+    pending:'<span style="font-size:.68rem;font-weight:700;color:var(--amber);background:rgba(217,119,6,0.1);padding:3px 9px;border-radius:100px">Refund pending</span>',
+    approved:'<span style="font-size:.68rem;font-weight:700;color:var(--green);background:rgba(22,163,74,0.1);padding:3px 9px;border-radius:100px">Refunded</span>',
+    denied:'<span style="font-size:.68rem;font-weight:700;color:var(--red);background:rgba(220,38,38,0.1);padding:3px 9px;border-radius:100px">Refund denied</span>'
+  };
+
   container.innerHTML='<div class="plist">'+list.map(pu=>{
     const p=pMap[pu.product_id];
     if(!p)return '';
     const date=new Date(pu.created_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
-    return '<div class="pi" data-product-id="'+p.id+'" onclick="goToPurchasedProduct(\''+p.id+'\')">'
-      +'<div class="pi-thumb" style="background:'+gr(p.category)+'">'+em(p.category)+'</div>'
-      +'<div class="pi-info">'
+    const refundReq=refundMap[pu.id];
+    const daysSince=(Date.now()-new Date(pu.created_at).getTime())/86400000;
+    const eligible=daysSince<=3;
+
+    let refundUi='';
+    if(refundReq){
+      refundUi=refundStatusBadge[refundReq.status]||'';
+    } else if(eligible){
+      refundUi='<button class="btn bg-btn bxs" onclick="event.stopPropagation();openRefundModal(\''+pu.id+'\',\''+escapeHtml(p.title||'').replace(/'/g,"\\'")+'\')">Request refund</button>';
+    } else {
+      refundUi='<span style="font-size:.68rem;color:var(--text3)">Refund window closed</span>';
+    }
+
+    return '<div class="pi" data-product-id="'+p.id+'">'
+      +'<div class="pi-thumb" style="background:'+gr(p.category)+';cursor:pointer" onclick="goToPurchasedProduct(\''+p.id+'\')">'+em(p.category)+'</div>'
+      +'<div class="pi-info" onclick="goToPurchasedProduct(\''+p.id+'\')" style="cursor:pointer">'
         +'<div class="pi-name">'+escapeHtml(p.title||'Untitled')+'</div>'
         +'<div class="pi-meta"><span>'+(p.category||'—')+'</span><span>$'+pu.amount+'</span><span>Purchased '+date+'</span></div>'
       +'</div>'
+      +'<div style="flex-shrink:0">'+refundUi+'</div>'
     +'</div>';
   }).join('')+'</div>';
+}
+
+function openRefundModal(purchaseId,title){
+  const existing=document.getElementById('refund-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='refund-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:400px;width:100%;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25);max-height:90vh;overflow-y:auto">
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:6px">Request a refund</div>
+      <p style="font-size:.8rem;color:var(--text3);margin-bottom:20px">${escapeHtml(title||'')}</p>
+      <div class="fg"><label class="fl">Why are you requesting a refund?</label><textarea class="fi" id="refund-reason-input" rows="4" placeholder="The product doesn't work as described, missing features, etc." style="resize:vertical"></textarea></div>
+      <p style="font-size:.76rem;color:var(--text3);margin-bottom:20px">The seller will review your request. Refunds are available within 3 days of purchase, per our terms.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn bp" style="flex:1;justify-content:center" id="refund-submit-btn" onclick="submitRefundRequest('${purchaseId}')">Submit request</button>
+        <button class="btn bg-btn" onclick="document.getElementById('refund-modal').remove()">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function submitRefundRequest(purchaseId){
+  const btn=document.getElementById('refund-submit-btn');
+  const reason=(document.getElementById('refund-reason-input').value||'').trim();
+  if(!reason){showToast('Please explain why you want a refund');return}
+  if(btn){btn.textContent='Submitting...';btn.disabled=true}
+
+  const rows=await sbGet(`/rest/v1/purchases?select=*&id=eq.${purchaseId}`);
+  const pu=rows&&rows[0];
+  if(!pu){showToast('Purchase not found');return}
+
+  const res=await sbAuthPost('/rest/v1/refund_requests',{
+    purchase_id:pu.id,
+    buyer_id:user.id,
+    seller_id:pu.seller_id,
+    product_id:pu.product_id,
+    reason
+  });
+  if(res&&res.error){
+    showToast(/duplicate|unique/i.test(res.error.message||'')?'You already requested a refund for this':(res.error.message||'Could not submit request'));
+    if(btn){btn.textContent='Submit request';btn.disabled=false}
+    return;
+  }
+  showToast('Refund request sent ✓');
+  document.getElementById('refund-modal')?.remove();
+  rPurchases();
 }
 
 async function goToPurchasedProduct(productId){
@@ -4579,6 +4711,8 @@ async function openNotification(id){
   if(n.link_type==='messages'){
     go('messages');
   } else if(n.link_type==='product' && n.link_id){
+    // refund-related notifications can change purchase status — drop the stale cache entry so the page re-checks the DB
+    if(/refund/i.test(n.title||'')) myPurchases.delete(n.link_id);
     const rows=await sbGet(`/rest/v1/products?select=*&id=eq.${n.link_id}`);
     if(rows&&rows[0]) showProduct(rows[0]);
     else go('marketplace');
