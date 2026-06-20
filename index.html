@@ -396,6 +396,14 @@ footer{background:var(--card);border-top:1px solid var(--border);padding:50px 28
 .pp-cat{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:12px}
 .pp-title{font-size:1.8rem;font-weight:800;color:var(--text);letter-spacing:-.025em;line-height:1.2;margin-bottom:10px}
 .pp-creator{display:flex;align-items:center;gap:9px;margin-bottom:20px}
+.follow-btn{padding:6px 16px;border-radius:9px;font-size:.76rem;font-weight:700;cursor:pointer;transition:all .15s;border:1.5px solid var(--accent);background:transparent;color:var(--accent);margin-left:auto;flex-shrink:0}
+.follow-btn:hover{background:var(--pale)}
+.follow-btn.following{background:var(--pale2);border-color:var(--border);color:var(--text2)}
+.follow-btn.following:hover{background:rgba(220,38,38,0.06);border-color:rgba(220,38,38,0.3);color:var(--red)}
+.follow-btn.following .fb-default{display:inline}
+.follow-btn.following .fb-hover{display:none}
+.follow-btn.following:hover .fb-default{display:none}
+.follow-btn.following:hover .fb-hover{display:inline}
 .pp-av{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff}
 .pp-desc{font-size:.9rem;color:var(--text2);line-height:1.8;margin-bottom:24px}
 .pp-tags{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:24px}
@@ -2336,8 +2344,9 @@ async function showProduct(p){
           '<div class="pp-av">'+(creator[0]||'C').toUpperCase()+'</div>'+
           '<div>'+
             '<div style="font-size:.82rem;font-weight:700;color:var(--text)">'+creator+'</div>'+
-            '<div style="font-size:.7rem;color:var(--text3)">Creator</div>'+
+            '<div style="font-size:.7rem;color:var(--text3)" id="pp-follower-count">Creator</div>'+
           '</div>'+
+          (isMine?'':'<button class="follow-btn" id="pp-follow-btn" onclick="toggleFollow(\''+p.user_id+'\')"><span class="fb-default">+ Follow</span></button>')+
         '</div>'+
         '<div id="pp-rating-summary" style="margin-bottom:18px"></div>'+
         '<div class="pp-img" style="background:'+gr(cat)+';margin-bottom:24px">'+imgHtml+'</div>'+
@@ -2378,6 +2387,7 @@ async function showProduct(p){
   }
 
   renderReviewsSection(p);
+  renderFollowState(p.user_id);
   go('product');
 }
 
@@ -2459,6 +2469,63 @@ async function rWishlist(){
   await loadRatings(list.map(p=>p.id));
   grid.innerHTML=list.map(pcard).join('');
   bindProductCardEvents(grid,list);
+}
+
+// ══ FOLLOW SELLER ══
+let myFollows=new Set(),followsLoaded=false;
+
+async function loadFollows(){
+  if(!user){myFollows=new Set();followsLoaded=false;return}
+  if(followsLoaded)return;
+  const rows=await sbGet(`/rest/v1/follows?select=seller_id&follower_id=eq.${user.id}`);
+  myFollows=new Set((rows||[]).map(r=>r.seller_id));
+  followsLoaded=true;
+}
+
+async function renderFollowState(sellerId){
+  const btn=document.getElementById('pp-follow-btn');
+  const countEl=document.getElementById('pp-follower-count');
+  if(!btn && !countEl)return;
+
+  const [count]=await Promise.all([
+    sbGet(`/rest/v1/follows?select=id&seller_id=eq.${sellerId}`),
+    user?loadFollows():Promise.resolve()
+  ]);
+  const followerCount=Array.isArray(count)?count.length:0;
+  if(countEl)countEl.textContent='Creator'+(followerCount?' · '+followerCount+' follower'+(followerCount===1?'':'s'):'');
+
+  if(btn){
+    const isFollowing=user&&myFollows.has(sellerId);
+    btn.classList.toggle('following',!!isFollowing);
+    btn.innerHTML=isFollowing
+      ?'<span class="fb-default">✓ Following</span><span class="fb-hover">Unfollow</span>'
+      :'<span class="fb-default">+ Follow</span>';
+  }
+}
+
+async function toggleFollow(sellerId){
+  if(!user){sessionStorage.setItem('redirect','product');showToast('Please sign in first');go('login');return}
+  if(sellerId===user.id){showToast("You can't follow yourself");return}
+  const isFollowing=myFollows.has(sellerId);
+  // optimistic update
+  if(isFollowing)myFollows.delete(sellerId);else myFollows.add(sellerId);
+  renderFollowState(sellerId);
+
+  if(isFollowing){
+    const res=await sbAuthPost(`/rest/v1/follows?follower_id=eq.${user.id}&seller_id=eq.${sellerId}`,null,'DELETE');
+    if(res&&res.error){
+      myFollows.add(sellerId);renderFollowState(sellerId);
+      showToast('Could not unfollow');return;
+    }
+    showToast('Unfollowed');
+  } else {
+    const res=await sbAuthPost('/rest/v1/follows',{follower_id:user.id,seller_id:sellerId},'POST',{'Prefer':'return=representation,resolution=merge-duplicates'});
+    if(res&&res.error){
+      myFollows.delete(sellerId);renderFollowState(sellerId);
+      showToast('Could not follow');return;
+    }
+    showToast("Following — you'll be notified of new uploads ✓");
+  }
 }
 
 function starsHtml(avg,size){
@@ -2930,7 +2997,7 @@ async function doSignup(){
   if(d.error){showToast(d.error.message);return}
   showToast('Account created! Check your email.');go('login');
 }
-function logout(){user=null;WISHLIST=new Set();wishlistLoaded=false;try{sessionStorage.removeItem('agentorry_user')}catch(e){};updateNav();go('home');showToast('Signed out')}
+function logout(){user=null;WISHLIST=new Set();wishlistLoaded=false;myFollows=new Set();followsLoaded=false;try{sessionStorage.removeItem('agentorry_user')}catch(e){};updateNav();go('home');showToast('Signed out')}
 
 // ══ PROFILE ══
 async function rProfile(){
