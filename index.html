@@ -257,6 +257,8 @@ html[data-theme="dark"] .theme-toggle{box-shadow:0 6px 20px rgba(0,0,0,0.4)}
 .coupon-row{display:flex;align-items:center;gap:14px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:8px}
 .coupon-code{font-family:ui-monospace,monospace;font-size:.85rem;font-weight:800;color:var(--text);background:var(--pale2);padding:4px 10px;border-radius:8px;letter-spacing:.02em}
 .coupon-row.inactive{opacity:.55}
+.payout-row{cursor:pointer;transition:background .15s}
+.payout-row:hover{background:var(--pale2)}
 @media(max-width:680px){
   #ad-slot-board{grid-template-columns:repeat(2,1fr)!important}
 }
@@ -961,13 +963,13 @@ try{
 <!-- ═══ SELLER ═══ -->
 <div class="page" id="page-seller">
   <div class="dw">
-    <div class="dh"><div><h1>Dashboard</h1><p>Manage your AI products</p></div><div style="display:flex;gap:8px"><button class="btn bg-btn bsm" onclick="go('messages')">Messages</button><button class="btn bg-btn bsm" onclick="go('profile')">Settings</button><button class="btn bp" onclick="go('upload')">+ Upload New</button></div></div>
+    <div class="dh"><div><h1>Dashboard</h1><p>Manage your AI products</p></div><div style="display:flex;gap:8px"><button class="btn bg-btn bsm" onclick="go('payouts')">Payouts</button><button class="btn bg-btn bsm" onclick="go('messages')">Messages</button><button class="btn bg-btn bsm" onclick="go('profile')">Settings</button><button class="btn bp" onclick="go('upload')">+ Upload New</button></div></div>
     <div class="sg">
       <div class="sc2"><div class="sc2-n" id="s-tot">0</div><div class="sc2-l">Products</div></div>
       <div class="sc2"><div class="sc2-n" id="s-live">0</div><div class="sc2-l">Published</div></div>
       <div class="sc2"><div class="sc2-n" id="s-downloads">0</div><div class="sc2-l">Downloads</div></div>
       <div class="sc2"><div class="sc2-n" id="s-sales">0</div><div class="sc2-l">Sales</div></div>
-      <div class="sc2"><div class="sc2-n" id="s-revenue">$0</div><div class="sc2-l">Revenue</div></div>
+      <div class="sc2" style="cursor:pointer" onclick="go('payouts')"><div class="sc2-n" id="s-revenue">$0</div><div class="sc2-l">Revenue →</div></div>
       <div class="sc2"><div class="sc2-n" id="s-rating">—</div><div class="sc2-l">Avg Rating</div></div>
     </div>
 
@@ -1015,6 +1017,43 @@ try{
   <div class="dw">
     <div class="dh"><div><h1>Purchases</h1><p id="pc-c">0 products</p></div><button class="btn bp bsm" onclick="go('marketplace')">Browse more →</button></div>
     <div id="pc-list"></div>
+  </div>
+</div>
+
+<!-- ═══ PAYOUTS ═══ -->
+<div class="page" id="page-payouts">
+  <div class="dw">
+    <div class="dh"><div><h1>Payouts</h1><p>Every sale, itemized — what you charged, what we took, what you keep</p></div><button class="btn bg-btn bsm" onclick="go('seller')">← Dashboard</button></div>
+
+    <div class="sg">
+      <div class="sc2"><div class="sc2-n" id="po-gross">$0</div><div class="sc2-l">Gross sales</div></div>
+      <div class="sc2"><div class="sc2-n" id="po-discounts">$0</div><div class="sc2-l">Coupon discounts</div></div>
+      <div class="sc2"><div class="sc2-n" id="po-fees">$0</div><div class="sc2-l">Platform fees</div></div>
+      <div class="sc2"><div class="sc2-n" id="po-net" style="color:var(--green)">$0</div><div class="sc2-l">You kept</div></div>
+    </div>
+
+    <div style="background:var(--pale);border:1.5px solid rgba(108,99,255,0.15);border-radius:14px;padding:14px 18px;margin-bottom:20px;font-size:.8rem;color:var(--text2);line-height:1.6">
+      💡 The 9% platform fee is always calculated on the original listed price — coupon discounts come out of your payout, never ours.
+    </div>
+
+    <div id="payouts-table-wrap">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem" id="payouts-table">
+          <thead>
+            <tr style="border-bottom:1.5px solid var(--border);text-align:left">
+              <th style="padding:10px 12px;color:var(--text3);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Product</th>
+              <th style="padding:10px 12px;color:var(--text3);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em">Date</th>
+              <th style="padding:10px 12px;color:var(--text3);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;text-align:right">List price</th>
+              <th style="padding:10px 12px;color:var(--text3);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;text-align:right">Discount</th>
+              <th style="padding:10px 12px;color:var(--text3);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;text-align:right">Buyer paid</th>
+              <th style="padding:10px 12px;color:var(--text3);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;text-align:right">Fee (9%)</th>
+              <th style="padding:10px 12px;color:var(--text3);font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;text-align:right">You kept</th>
+            </tr>
+          </thead>
+          <tbody id="payouts-tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2322,7 +2361,7 @@ function toggleMobileMenu(){
 // ══ PAGES ══
 function go(n){
   // Auth gate — upload, seller, profile, purchases, wishlist require login
-  const protected_=['upload','seller','profile','purchases','wishlist','messages'];
+  const protected_=['upload','seller','profile','purchases','wishlist','messages','payouts'];
   if(protected_.includes(n)&&!user){
     sessionStorage.setItem('redirect',n);
     n='login';
@@ -2347,6 +2386,7 @@ function go(n){
   if(n!=='messages'&&realtimeWs){try{realtimeWs.close();realtimeWs=null}catch(e){}}
   if(n==='contact')buildFAQ();
   if(n==='advertise')renderAdSlotBoard();
+  if(n==='payouts'&&user)rPayouts();
 }
 
 // ══ PRODUCT PAGE ══
@@ -4216,6 +4256,63 @@ async function rSeller(){
       <button class="ib del" onclick="event.stopPropagation();confirmDeleteProduct('${p.id}','${escapeHtml(p.title||'this product').replace(/'/g,"\\'")}')" title="Delete"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
     </div>
   </div>`;
+  }).join('');
+}
+
+// ══ PAYOUTS — itemized transaction history ══
+async function rPayouts(){
+  if(!user)return;
+  const tbody=document.getElementById('payouts-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=`<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--text3);font-size:.82rem">Loading transactions…</td></tr>`;
+
+  const purchases=await sbGet(`/rest/v1/purchases?select=*&seller_id=eq.${user.id}&status=eq.completed&order=created_at.desc`);
+  const rows=Array.isArray(purchases)?purchases:[];
+
+  if(!rows.length){
+    document.getElementById('po-gross').textContent='$0';
+    document.getElementById('po-discounts').textContent='$0';
+    document.getElementById('po-fees').textContent='$0';
+    document.getElementById('po-net').textContent='$0';
+    tbody.innerHTML=`<tr><td colspan="7" style="padding:0">${es('💸','No sales yet','Transactions will show up here once buyers purchase your products',"go('seller')")}</td></tr>`;
+    return;
+  }
+
+  const productIds=[...new Set(rows.map(r=>r.product_id))];
+  const products=await sbGet(`/rest/v1/products?select=id,title,category&id=in.(${productIds.join(',')})`);
+  const pMap={};(products||[]).forEach(p=>pMap[p.id]=p);
+
+  let gross=0,discounts=0,fees=0,net=0;
+  rows.forEach(r=>{
+    const listPrice=r.original_price!==null&&r.original_price!==undefined?parseFloat(r.original_price):parseFloat(r.amount)||0;
+    const discount=parseFloat(r.discount_amount)||0;
+    const fee=r.platform_fee!==null&&r.platform_fee!==undefined?parseFloat(r.platform_fee):listPrice*0.09;
+    const payout=r.seller_payout!==null&&r.seller_payout!==undefined?parseFloat(r.seller_payout):(parseFloat(r.amount)||0)*0.91;
+    gross+=listPrice;discounts+=discount;fees+=fee;net+=payout;
+  });
+
+  document.getElementById('po-gross').textContent='$'+gross.toFixed(2).replace(/\.00$/,'');
+  document.getElementById('po-discounts').textContent='$'+discounts.toFixed(2).replace(/\.00$/,'');
+  document.getElementById('po-fees').textContent='$'+fees.toFixed(2).replace(/\.00$/,'');
+  document.getElementById('po-net').textContent='$'+net.toFixed(2).replace(/\.00$/,'');
+
+  tbody.innerHTML=rows.map(r=>{
+    const p=pMap[r.product_id];
+    const listPrice=r.original_price!==null&&r.original_price!==undefined?parseFloat(r.original_price):parseFloat(r.amount)||0;
+    const discount=parseFloat(r.discount_amount)||0;
+    const buyerPaid=parseFloat(r.amount)||0;
+    const fee=r.platform_fee!==null&&r.platform_fee!==undefined?parseFloat(r.platform_fee):listPrice*0.09;
+    const payout=r.seller_payout!==null&&r.seller_payout!==undefined?parseFloat(r.seller_payout):buyerPaid*0.91;
+    const date=new Date(r.created_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+    return `<tr style="border-bottom:1px solid var(--border)" data-product-id="${r.product_id}" onclick="goToPurchasedProduct('${r.product_id}')" class="payout-row">
+      <td style="padding:12px;font-weight:700;color:var(--text);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p?.title||'(deleted product)')}</td>
+      <td style="padding:12px;color:var(--text3)">${date}</td>
+      <td style="padding:12px;text-align:right;color:var(--text2)">$${listPrice.toFixed(2)}</td>
+      <td style="padding:12px;text-align:right;color:${discount>0?'var(--red)':'var(--text3)'}">${discount>0?'-$'+discount.toFixed(2):'—'}</td>
+      <td style="padding:12px;text-align:right;color:var(--text2)">$${buyerPaid.toFixed(2)}</td>
+      <td style="padding:12px;text-align:right;color:var(--text3)">-$${fee.toFixed(2)}</td>
+      <td style="padding:12px;text-align:right;font-weight:800;color:var(--green)">$${payout.toFixed(2)}</td>
+    </tr>`;
   }).join('');
 }
 
