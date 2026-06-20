@@ -224,6 +224,15 @@ html[data-theme="dark"] .theme-toggle{box-shadow:0 6px 20px rgba(0,0,0,0.4)}
 
 /* ══ HSCROLL ══ */
 .hsc{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+.topsellers-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.seller-card{background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:20px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;text-align:center}
+.seller-card:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 8px 28px rgba(108,99,255,0.12)}
+.seller-rank{position:absolute;top:12px;left:12px;width:24px;height:24px;border-radius:50%;background:var(--pale);color:var(--accent);font-size:.7rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.seller-card{position:relative}
+.seller-av{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:12px;box-shadow:0 4px 16px rgba(108,99,255,0.25)}
+.seller-name{font-size:.88rem;font-weight:800;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.seller-stats{display:flex;gap:10px;font-size:.7rem;color:var(--text3);margin-top:6px}
+.seller-stat-n{font-weight:800;color:var(--text2)}
 .hsc::-webkit-scrollbar{display:none}
 .hcrd{flex-shrink:0;width:230px;background:var(--card);border:1.5px solid var(--border);border-radius:18px;overflow:hidden;cursor:pointer;transition:all .25s}
 .hcrd:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 8px 32px rgba(108,99,255,0.12)}
@@ -651,6 +660,30 @@ try{
     </div>
   </div>
 
+  <div class="sw au" id="home-sponsored-wrap" style="display:none">
+    <div class="sh">
+      <div class="sh-l"><div class="ey"><span class="sponsored-badge">⚡ Sponsored</span></div><div class="ti">Featured this week</div></div>
+    </div>
+    <div class="hsc" id="home-sponsored-row" style="overflow-x:auto"></div>
+  </div>
+
+  <div class="sw au">
+    <div class="sh">
+      <div class="sh-l"><div class="ey">Trending now</div><div class="ti">🔥 Most popular this week</div></div>
+      <div class="sh-r"><button class="btn bg-btn bsm" onclick="go('marketplace')">See all →</button></div>
+    </div>
+    <div class="trending-marquee-wrap" style="position:relative;overflow:hidden;mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,black 8%,black 92%,transparent)">
+      <div class="hsc trending-marquee" id="trending-row"></div>
+    </div>
+  </div>
+
+  <div class="sw au">
+    <div class="sh">
+      <div class="sh-l"><div class="ey">Top sellers</div><div class="ti">Creators making moves</div></div>
+    </div>
+    <div class="topsellers-row" id="topsellers-row"></div>
+  </div>
+
   <div class="sw au">
     <div class="sh">
       <div class="sh-l"><div class="ey">Collections</div><div class="ti">Curated by Agentorry</div></div>
@@ -932,6 +965,11 @@ try{
       <button class="btn bp bsm" style="flex-shrink:0" onclick="event.stopPropagation();go('advertise')">Boost your agent →</button>
     </div>
 
+    <div id="active-campaigns-section" style="display:none;margin-bottom:20px">
+      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Active boosts</div>
+      <div id="active-campaigns-list"></div>
+    </div>
+
     <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px">Your products</div>
     <div class="plist" id="slist"></div>
   </div>
@@ -967,6 +1005,23 @@ try{
   <div class="dw">
     <div class="dh"><div><h1>Wishlist</h1><p id="wc-c">0 saved</p></div><button class="btn bp bsm" onclick="go('marketplace')">Browse →</button></div>
     <div class="pgrid" id="wgrid"></div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN REPORTS ═══ -->
+<div class="page" id="page-admin-reports">
+  <div class="dw">
+    <div class="dh">
+      <div>
+        <h1>Reports</h1>
+        <p>Trust &amp; safety — review and act on user reports</p>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div class="sc2" style="min-width:90px"><div class="sc2-n" id="admin-reports-count" style="font-size:1.2rem">0</div><div class="sc2-l">Total</div></div>
+        <div class="sc2" style="min-width:90px"><div class="sc2-n" id="admin-reports-open" style="font-size:1.2rem;color:var(--red)">0</div><div class="sc2-l">Open</div></div>
+      </div>
+    </div>
+    <div id="admin-reports-list"></div>
   </div>
 </div>
 
@@ -1694,10 +1749,7 @@ try{
           <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text3)"><span style="color:var(--border2);font-weight:700">✗</span>Homepage feature</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text3)"><span style="color:var(--border2);font-weight:700">✗</span>Analytics dashboard</div>
         </div>
-        <button class="btn bp bsm" style="width:100%;justify-content:center" onclick="showToast('Ads coming soon! Contact us at hello@agentorry.com')">Get started</button>
-      </div>
-
-      <div style="background:linear-gradient(135deg,#1e1b4b,#2d2870);border-radius:22px;padding:28px;text-align:center;position:relative;overflow:hidden;transform:scale(1.04);box-shadow:0 8px 32px rgba(108,99,255,0.25)">
+        <button class="btn bp bsm" style="width:100%;justify-content:center" onclick="openBoostModal('starter',9,7)">Get started</button>
         <div style="position:absolute;top:14px;right:14px;padding:3px 10px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:100px;font-size:.62rem;font-weight:800;color:white">POPULAR</div>
         <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,0.5);margin-bottom:12px">Growth</div>
         <div style="font-size:2.5rem;font-weight:800;color:white;letter-spacing:-.04em;margin-bottom:4px">$29</div>
@@ -1709,7 +1761,7 @@ try{
           <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:rgba(255,255,255,0.8)"><span style="color:#4ade80;font-weight:700">✓</span>Homepage feature</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:rgba(255,255,255,0.5)"><span style="color:rgba(255,255,255,0.3);font-weight:700">✗</span>Analytics dashboard</div>
         </div>
-        <button class="btn bw bsm" style="width:100%;justify-content:center" onclick="showToast('Ads coming soon! Contact us at hello@agentorry.com')">Get started</button>
+        <button class="btn bw bsm" style="width:100%;justify-content:center" onclick="openBoostModal('growth',29,7)">Get started</button>
       </div>
 
       <div style="background:#fff;border:1.5px solid var(--border);border-radius:22px;padding:28px;text-align:center;transition:all .2s" onmouseover="this.style.borderColor='var(--border2)';this.style.boxShadow='0 4px 20px rgba(108,99,255,0.08)'" onmouseout="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
@@ -1723,7 +1775,7 @@ try{
           <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Homepage feature</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2)"><span style="color:var(--green);font-weight:700">✓</span>Analytics dashboard</div>
         </div>
-        <button class="btn bp bsm" style="width:100%;justify-content:center" onclick="showToast('Ads coming soon! Contact us at hello@agentorry.com')">Get started</button>
+        <button class="btn bp bsm" style="width:100%;justify-content:center" onclick="openBoostModal('pro',79,7)">Get started</button>
       </div>
     </div>
 
@@ -2243,13 +2295,15 @@ window.addEventListener('scroll',()=>document.getElementById('nav').classList.to
 function tab(n){document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));const el=document.getElementById('t-'+n);if(el)el.classList.add('on');document.querySelectorAll('.nm-link').forEach(t=>t.classList.remove('on'));const me=document.getElementById('m-t-'+n);if(me)me.classList.add('on')}
 function updateNav(){
   const r=document.getElementById('nav-r');
+  const adminBtn=isAdmin()?'<button class="nb bg-btn" onclick="go(\'admin-reports\')" title="Reports">🛡️</button>':'';
   r.innerHTML=user
-    ?`<button class="nb nb-g" onclick="go('upload')">↑ Upload</button><div class="nav-av" onclick="go('profile')">${(user.email||'U')[0].toUpperCase()}</div>`
+    ?adminBtn+`<button class="nb nb-g" onclick="go('upload')">↑ Upload</button><div class="nav-av" onclick="go('profile')">${(user.email||'U')[0].toUpperCase()}</div>`
     :`<button class="nb nb-g" onclick="go('login')">Sign in</button><button class="nb nb-s" onclick="go('signup')">Get started →</button>`;
   const ma=document.getElementById('nm-actions');
   if(ma){
+    const adminBtnM=isAdmin()?`<button class="nb bg-btn" style="width:100%;justify-content:center" onclick="go('admin-reports');toggleMobileMenu()">🛡️ Reports</button>`:'';
     ma.innerHTML=user
-      ?`<button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('upload');toggleMobileMenu()">↑ Upload</button><button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('profile');toggleMobileMenu()">Profile</button>`
+      ?adminBtnM+`<button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('upload');toggleMobileMenu()">↑ Upload</button><button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('profile');toggleMobileMenu()">Profile</button>`
       :`<button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('login');toggleMobileMenu()">Sign in</button><button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('signup');toggleMobileMenu()">Get started →</button>`;
   }
   initNotifications();
@@ -2275,6 +2329,10 @@ function go(n){
     n='login';
     showToast('Please sign in first');
   }
+  if(n==='admin-reports'&&!isAdmin()){
+    showToast('Not authorized');
+    n='home';
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById('page-'+n).classList.add('on');
   window.scrollTo(0,0);
@@ -2285,6 +2343,7 @@ function go(n){
   if(n==='profile'&&user){rProfile()}
   if(n==='purchases'&&user){rPurchases()}
   if(n==='wishlist'&&user){rWishlist()}
+  if(n==='admin-reports')rAdminReports();
   if(n==='messages')rMessages();
   if(n!=='messages'&&realtimeWs){try{realtimeWs.close();realtimeWs=null}catch(e){}}
   if(n==='contact')buildFAQ();
@@ -2368,6 +2427,7 @@ async function showProduct(p){
             '<div class="pp-perk">9% platform fee on sales</div>'+
           '</div>'+
           scoreHtml+
+          (isMine?'':'<div style="text-align:center;margin-top:16px"><span style="font-size:.72rem;color:var(--text3);cursor:pointer" onclick="openReportModal(\''+p.id+'\',\''+escapeHtml(p.title||'').replace(/'/g,"\\'")+'\')">⚑ Report this product</span></div>')+
         '</div>'+
       '</div>'+
     '</div>';
@@ -2467,7 +2527,7 @@ async function rWishlist(){
     return;
   }
   await loadRatings(list.map(p=>p.id));
-  grid.innerHTML=list.map(pcard).join('');
+  grid.innerHTML=list.map(p=>pcard(p)).join('');
   bindProductCardEvents(grid,list);
 }
 
@@ -2616,6 +2676,118 @@ async function confirmSimulatedPurchase(productId){
   showProduct(p);
 }
 
+// ══ AD CAMPAIGNS (simulated boost/sponsored placements) ══
+const AD_PLANS={
+  starter:{label:'Starter',badge:''},
+  growth:{label:'Growth',badge:'Homepage feature'},
+  pro:{label:'Pro',badge:'Homepage + analytics'}
+};
+
+async function openBoostModal(plan,price,days){
+  if(!user){sessionStorage.setItem('redirect','advertise');showToast('Please sign in first');go('login');return}
+  const mine=await sbGet(`/rest/v1/products?select=id,title,category,price,image_url,published&user_id=eq.${user.id}&order=created_at.desc`);
+  const products=Array.isArray(mine)?mine:[];
+  if(!products.length){
+    showToast('Upload a product first to boost it');
+    go('upload');
+    return;
+  }
+
+  const existing=document.getElementById('boost-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='boost-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+
+  const productOptions=products.map(p=>`<option value="${p.id}" ${!p.published?'disabled':''}>${escapeHtml(p.title||'Untitled')}${!p.published?' (unpublished)':''}</option>`).join('');
+  const planInfo=AD_PLANS[plan];
+
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:420px;width:100%;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25);max-height:90vh;overflow-y:auto">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--pale);border:1px solid rgba(108,99,255,0.2);border-radius:100px;font-size:.65rem;font-weight:800;color:var(--accent);margin-bottom:16px;letter-spacing:.05em;text-transform:uppercase">🧪 Test mode — no real charge</div>
+      <div style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:4px">Boost — ${planInfo.label} plan</div>
+      <div style="font-size:1.8rem;font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:18px">$${price} <span style="font-size:.85rem;font-weight:600;color:var(--text3)">/ ${days} days</span></div>
+      <div class="fg"><label class="fl">Which product?</label><select class="fi" id="boost-product-select">${productOptions}</select></div>
+      <p style="font-size:.78rem;color:var(--text2);line-height:1.6;margin-bottom:20px">Your product appears in the Sponsored row on the marketplace${plan!=='starter'?' and homepage':''} for ${days} days, starting immediately after checkout.</p>
+      <button class="btn bp" style="width:100%;justify-content:center;margin-bottom:10px" id="boost-confirm-btn" onclick="confirmBoost('${plan}',${price},${days})">Simulate payment & go live →</button>
+      <button class="btn bg-btn" style="width:100%;justify-content:center" onclick="document.getElementById('boost-modal').remove()">Cancel</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function confirmBoost(plan,price,days){
+  const btn=document.getElementById('boost-confirm-btn');
+  if(btn){btn.textContent='Processing...';btn.disabled=true}
+  const productId=document.getElementById('boost-product-select').value;
+  if(!productId){showToast('Select a product');if(btn){btn.textContent='Simulate payment & go live →';btn.disabled=false}return}
+
+  const now=new Date();
+  const ends=new Date(now.getTime()+days*86400000);
+  const res=await sbAuthPost('/rest/v1/ad_campaigns',{
+    user_id:user.id,
+    product_id:productId,
+    plan,
+    amount:price,
+    duration_days:days,
+    starts_at:now.toISOString(),
+    ends_at:ends.toISOString(),
+    is_simulated:true
+  });
+  if(res&&res.error){
+    showToast(res.error.message||'Could not start campaign');
+    if(btn){btn.textContent='Simulate payment & go live →';btn.disabled=false}
+    return;
+  }
+  showToast('🎉 Your product is now featured!');
+  document.getElementById('boost-modal')?.remove();
+  go('seller');
+}
+
+async function renderActiveCampaigns(){
+  if(!user)return;
+  const section=document.getElementById('active-campaigns-section');
+  const list=document.getElementById('active-campaigns-list');
+  if(!section||!list)return;
+
+  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=*&user_id=eq.${user.id}&status=eq.active&order=ends_at.desc`);
+  const rows=Array.isArray(campaigns)?campaigns:[];
+  const now=Date.now();
+  const live=rows.filter(c=>new Date(c.ends_at).getTime()>now);
+
+  if(!live.length){section.style.display='none';return}
+  section.style.display='block';
+
+  const productIds=[...new Set(live.map(c=>c.product_id))];
+  const products=await sbGet(`/rest/v1/products?select=id,title,category&id=in.(${productIds.join(',')})`);
+  const pMap={};(products||[]).forEach(p=>pMap[p.id]=p);
+
+  list.innerHTML=live.map(c=>{
+    const p=pMap[c.product_id];
+    const daysLeft=Math.max(0,Math.ceil((new Date(c.ends_at).getTime()-now)/86400000));
+    const planInfo=AD_PLANS[c.plan]||{label:c.plan};
+    return `<div style="display:flex;align-items:center;gap:14px;background:var(--card);border:1.5px solid rgba(108,99,255,0.2);border-radius:14px;padding:14px 18px;margin-bottom:8px">
+      <div style="width:38px;height:38px;border-radius:10px;background:${p?gr(p.category):'var(--pale)'};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">${p?em(p.category):'⚡'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.85rem;font-weight:700;color:var(--text)">${escapeHtml(p?.title||'Product')}</div>
+        <div style="font-size:.72rem;color:var(--text3)">${planInfo.label} plan · ${daysLeft} day${daysLeft===1?'':'s'} left</div>
+      </div>
+      <span class="sponsored-badge">⚡ Live</span>
+    </div>`;
+  }).join('');
+}
+
+// Fetch currently-active campaign products, used to populate sponsored slots
+async function getActiveSponsoredProducts(limit){
+  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=product_id,plan,ends_at&status=eq.active&order=created_at.desc`);
+  const rows=Array.isArray(campaigns)?campaigns:[];
+  const now=Date.now();
+  const liveProductIds=[...new Set(rows.filter(c=>new Date(c.ends_at).getTime()>now).map(c=>c.product_id))];
+  if(!liveProductIds.length)return[];
+  const ids=liveProductIds.slice(0,limit||6);
+  const products=await sbGet(`/rest/v1/products?select=*&id=in.(${ids.join(',')})&published=eq.true`);
+  return Array.isArray(products)?products:[];
+}
+
 // ══ EDIT / DELETE PRODUCT ══
 const EDIT_CATEGORIES=['AI Agents','Automation','Chatbot','Workflow','Prompt Pack','Marketing','Sales','Customer Support','Content Creation','Research','Productivity','Coding','Education','Business','Other'];
 
@@ -2712,6 +2884,128 @@ async function executeDeleteProduct(productId){
   document.getElementById('delete-modal')?.remove();
   DB=[];
   rSeller();
+}
+
+// ══ REPORT PRODUCT ══
+const ADMIN_UID='59808595-7a22-4348-af1e-417269fbab7e';
+const REPORT_REASONS=[
+  {v:'prohibited_content',l:'Prohibited content (haram, adult, hate, etc.)'},
+  {v:'malware_security',l:'Malware or security risk'},
+  {v:'ip_violation',l:'Stolen / unauthorized IP'},
+  {v:'misleading',l:'Misleading description or fake product'},
+  {v:'spam_fake',l:'Spam or fake listing'},
+  {v:'other',l:'Other'}
+];
+
+function openReportModal(productId,title){
+  if(!user){sessionStorage.setItem('redirect','product');showToast('Please sign in first');go('login');return}
+  const existing=document.getElementById('report-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='report-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  const reasonOptions=REPORT_REASONS.map(r=>`<option value="${r.v}">${r.l}</option>`).join('');
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:420px;width:100%;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25);max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:1.2rem">⚑</span>
+        <div style="font-size:1.05rem;font-weight:800;color:var(--text)">Report product</div>
+      </div>
+      <p style="font-size:.8rem;color:var(--text3);margin-bottom:20px">${escapeHtml(title||'')}</p>
+      <div class="fg"><label class="fl">Reason</label><select class="fi" id="report-reason">${reasonOptions}</select></div>
+      <div class="fg"><label class="fl">Details (optional)</label><textarea class="fi" id="report-details" rows="4" placeholder="Anything that helps us review this faster..." style="resize:vertical"></textarea></div>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="btn" style="flex:1;justify-content:center;background:var(--red);color:#fff" id="report-submit-btn" onclick="submitReport('${productId}')">Submit report</button>
+        <button class="btn bg-btn" onclick="document.getElementById('report-modal').remove()">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function submitReport(productId){
+  const btn=document.getElementById('report-submit-btn');
+  if(btn){btn.textContent='Submitting...';btn.disabled=true}
+  const reason=document.getElementById('report-reason').value;
+  const details=document.getElementById('report-details').value.trim();
+  const res=await sbAuthPost('/rest/v1/reports',{
+    reporter_id:user.id,
+    product_id:productId,
+    reason,
+    details:details||null
+  });
+  if(res&&res.error){
+    showToast(res.error.message||'Could not submit report');
+    if(btn){btn.textContent='Submit report';btn.disabled=false}
+    return;
+  }
+  showToast('Report submitted — our team will review it');
+  document.getElementById('report-modal')?.remove();
+}
+
+// ══ ADMIN: REPORTS DASHBOARD ══
+function isAdmin(){return user&&user.id===ADMIN_UID}
+
+async function rAdminReports(){
+  if(!isAdmin()){go('home');return}
+  const list=document.getElementById('admin-reports-list');
+  if(!list)return;
+  list.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:.82rem">Loading reports…</div>';
+
+  const reports=await sbGet('/rest/v1/reports?select=*&order=created_at.desc');
+  const rows=Array.isArray(reports)?reports:[];
+
+  document.getElementById('admin-reports-count').textContent=rows.length+' total';
+  const openCount=rows.filter(r=>r.status==='open').length;
+  document.getElementById('admin-reports-open').textContent=openCount+' open';
+
+  if(!rows.length){
+    list.innerHTML=es('🛡️','No reports yet','Reports submitted by users will appear here',"go('admin-reports')");
+    return;
+  }
+
+  const productIds=[...new Set(rows.map(r=>r.product_id))];
+  const reporterIds=[...new Set(rows.map(r=>r.reporter_id))];
+  const [products,profiles]=await Promise.all([
+    sbGet(`/rest/v1/products?select=id,title,user_id&id=in.(${productIds.join(',')})`),
+    sbGet(`/rest/v1/profiles?select=id,username,full_name&id=in.(${reporterIds.join(',')})`)
+  ]);
+  const pMap={}; (products||[]).forEach(p=>pMap[p.id]=p);
+  const profMap={}; (profiles||[]).forEach(pr=>profMap[pr.id]=pr);
+
+  const statusColors={open:'var(--red)',reviewing:'var(--amber)',resolved:'var(--green)',dismissed:'var(--text3)'};
+  const reasonLabels={};
+  REPORT_REASONS.forEach(r=>reasonLabels[r.v]=r.l);
+
+  list.innerHTML=rows.map(r=>{
+    const prod=pMap[r.product_id];
+    const reporter=profMap[r.reporter_id];
+    const reporterName=reporter?(reporter.full_name||reporter.username||'User'):'User';
+    const date=new Date(r.created_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+    return `<div style="background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <div style="font-size:.88rem;font-weight:800;color:var(--text);cursor:pointer" onclick="${prod?`goToPurchasedProduct('${r.product_id}')`:''}">${escapeHtml(prod?.title||'(deleted product)')}</div>
+          <div style="font-size:.74rem;color:var(--text3);margin-top:2px">Reported by ${escapeHtml(reporterName)} · ${date}</div>
+        </div>
+        <span style="font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:3px 10px;border-radius:100px;background:${statusColors[r.status]}20;color:${statusColors[r.status]};flex-shrink:0">${r.status}</span>
+      </div>
+      <div style="font-size:.8rem;color:var(--text2);margin-bottom:6px"><strong style="color:var(--text)">${reasonLabels[r.reason]||r.reason}</strong></div>
+      ${r.details?`<div style="font-size:.8rem;color:var(--text2);background:var(--pale2);border-radius:10px;padding:10px 12px;margin-bottom:10px;line-height:1.5">${escapeHtml(r.details)}</div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${r.status!=='reviewing'?`<button class="btn bg-btn bxs" onclick="updateReportStatus('${r.id}','reviewing')">Mark reviewing</button>`:''}
+        ${r.status!=='resolved'?`<button class="btn bxs" style="background:var(--green);color:#fff" onclick="updateReportStatus('${r.id}','resolved')">Mark resolved</button>`:''}
+        ${r.status!=='dismissed'?`<button class="btn bg-btn bxs" onclick="updateReportStatus('${r.id}','dismissed')">Dismiss</button>`:''}
+        ${prod?`<button class="btn bg-btn bxs" onclick="confirmDeleteProduct('${r.product_id}','${escapeHtml(prod.title||'this product').replace(/'/g,"\\'")}');setTimeout(()=>rAdminReports(),600)">Delete product</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function updateReportStatus(reportId,status){
+  const res=await sbAuthPost(`/rest/v1/reports?id=eq.${reportId}`,{status,resolved_at:status==='resolved'?new Date().toISOString():null},'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not update report');return}
+  showToast('Report updated');
+  rAdminReports();
 }
 
 async function renderReviewsSection(p){
@@ -2850,14 +3144,15 @@ async function deleteMyReview(productId){
   if(currentReviewProduct) renderReviewsSection(currentReviewProduct);
 }
 
-function pcard(p){
+function pcard(p,sponsored){
   const price=p.price||0;
   const creator=p.profiles?.username||p.profiles?.full_name||p.username||'Creator';
   const cat=p.category||'';
   const imgHtml=p.image_url?'<img src="'+p.image_url+'" style="width:100%;height:100%;object-fit:cover">':em(cat);
   const pid=p.id;
-  return '<div class="pcard" data-product-id="'+pid+'">'
-    +'<div class="pcard-img" style="background:'+gr(cat)+'">'+imgHtml+wishHeartHtml(pid)+'<span class="pcard-badge">'+cat+'</span></div>'
+  const sponsoredBadge=sponsored?'<span class="sponsored-badge" style="position:absolute;top:8px;left:8px">⚡ Sponsored</span>':'';
+  return '<div class="pcard'+(sponsored?' sponsored':'')+'" data-product-id="'+pid+'">'
+    +'<div class="pcard-img" style="background:'+gr(cat)+'">'+imgHtml+wishHeartHtml(pid)+(sponsored?sponsoredBadge:'<span class="pcard-badge">'+cat+'</span>')+'</div>'
     +'<div class="pcard-body">'
       +'<div class="pcard-title">'+(p.title||'Untitled')+'</div>'
       +'<div class="pcard-desc">'+(p.description||'')+'</div>'
@@ -2948,8 +3243,146 @@ async function renderHome(){
   } else {
     // No products - show static message, dont scroll
     newWeek.parentElement.innerHTML = `<div style="padding:40px 20px;color:var(--text3);font-size:.875rem;font-weight:600">No products yet — <a style="color:var(--accent);cursor:pointer;font-weight:700" onclick="go('upload')">be the first to upload →</a></div>`;
+    const trendingSection=document.querySelector('.trending-marquee-wrap');
+    if(trendingSection)trendingSection.parentElement.style.display='none';
+    const sellersRow=document.getElementById('topsellers-row');
+    if(sellersRow)sellersRow.closest('.sw').style.display='none';
     return;
   }
+
+  renderHomeSponsored();
+  renderTrending();
+  renderTopSellers();
+}
+
+async function renderHomeSponsored(){
+  const wrap=document.getElementById('home-sponsored-wrap');
+  const row=document.getElementById('home-sponsored-row');
+  if(!wrap||!row)return;
+
+  const campaigns=await sbGet(`/rest/v1/ad_campaigns?select=product_id,plan,ends_at&status=eq.active&plan=in.(growth,pro)&order=created_at.desc`);
+  const rows=Array.isArray(campaigns)?campaigns:[];
+  const now=Date.now();
+  const liveIds=[...new Set(rows.filter(c=>new Date(c.ends_at).getTime()>now).map(c=>c.product_id))];
+
+  if(!liveIds.length){wrap.style.display='none';return}
+
+  const products=await sbGet(`/rest/v1/products?select=*&id=in.(${liveIds.slice(0,8).join(',')})&published=eq.true`);
+  const list=Array.isArray(products)?products:[];
+  if(!list.length){wrap.style.display='none';return}
+
+  wrap.style.display='block';
+  await loadRatings(list.map(p=>p.id));
+  await loadWishlist();
+  row.innerHTML=list.map(hcard).join('');
+  bindProductCardEvents(row,list);
+}
+
+async function renderTrending(){
+  const wrap=document.querySelector('.trending-marquee-wrap');
+  const row=document.getElementById('trending-row');
+  if(!row)return;
+  if(wrap)wrap.parentElement.style.display='';
+
+  const productIds=DB.map(p=>p.id);
+  if(!productIds.length)return;
+  const idList=productIds.join(',');
+
+  const [downloads,purchases]=await Promise.all([
+    sbGet(`/rest/v1/downloads?select=product_id&product_id=in.(${idList})`),
+    sbGet(`/rest/v1/purchases?select=product_id&product_id=in.(${idList})&status=eq.completed`)
+  ]);
+  await loadRatings(productIds);
+
+  const dlCount={},puCount={};
+  (downloads||[]).forEach(d=>dlCount[d.product_id]=(dlCount[d.product_id]||0)+1);
+  (purchases||[]).forEach(p=>puCount[p.product_id]=(puCount[p.product_id]||0)+1);
+
+  const scored=DB.map(p=>{
+    const dl=dlCount[p.id]||0;
+    const pu=puCount[p.id]||0;
+    const rating=RATINGS[p.id];
+    const score=dl*1 + pu*4 + (rating?rating.avg*rating.count:0);
+    return {p,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,8);
+
+  if(!scored.length){
+    wrap.parentElement.style.display='none';
+    return;
+  }
+
+  await loadWishlist();
+  const items=scored.map(x=>x.p);
+  const cards=items.map(hcard).join('');
+  row.innerHTML=cards+cards;
+  bindProductCardEvents(row,items);
+  setTimeout(()=>startMarquee('trending-row',0.9),100);
+}
+
+async function renderTopSellers(){
+  const container=document.getElementById('topsellers-row');
+  if(!container)return;
+  const section=container.closest('.sw');
+
+  const productIds=DB.map(p=>p.id);
+  if(!productIds.length){if(section)section.style.display='none';return}
+  const idList=productIds.join(',');
+  const sellerIds=[...new Set(DB.map(p=>p.user_id))];
+
+  const [downloads,purchases,reviews,profiles]=await Promise.all([
+    sbGet(`/rest/v1/downloads?select=product_id&product_id=in.(${idList})`),
+    sbGet(`/rest/v1/purchases?select=product_id,amount&product_id=in.(${idList})&status=eq.completed`),
+    sbGet(`/rest/v1/reviews?select=product_id,rating&product_id=in.(${idList})`),
+    sbGet(`/rest/v1/profiles?select=id,username,full_name&id=in.(${sellerIds.join(',')})`)
+  ]);
+
+  const prodToSeller={};
+  DB.forEach(p=>prodToSeller[p.id]=p.user_id);
+  const profMap={};(profiles||[]).forEach(pr=>profMap[pr.id]=pr);
+
+  const sellerStats={};
+  sellerIds.forEach(id=>sellerStats[id]={downloads:0,sales:0,revenue:0,ratingSum:0,ratingCount:0,products:0});
+  DB.forEach(p=>{if(sellerStats[p.user_id])sellerStats[p.user_id].products++});
+  (downloads||[]).forEach(d=>{const s=prodToSeller[d.product_id];if(s&&sellerStats[s])sellerStats[s].downloads++});
+  (purchases||[]).forEach(p=>{const s=prodToSeller[p.product_id];if(s&&sellerStats[s]){sellerStats[s].sales++;sellerStats[s].revenue+=parseFloat(p.amount)||0;}});
+  (reviews||[]).forEach(r=>{const s=prodToSeller[r.product_id];if(s&&sellerStats[s]){sellerStats[s].ratingSum+=r.rating;sellerStats[s].ratingCount++;}});
+
+  const ranked=sellerIds.map(id=>{
+    const s=sellerStats[id];
+    const score=s.downloads*1 + s.sales*4 + s.ratingSum;
+    return {id,...s,score,name:(profMap[id]&&(profMap[id].full_name||profMap[id].username))||'Creator'};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,6);
+
+  if(!ranked.length){if(section)section.style.display='none';return}
+  if(section)section.style.display='';
+
+  container.innerHTML=ranked.map((s,i)=>{
+    const avgRating=s.ratingCount?(s.ratingSum/s.ratingCount).toFixed(1):null;
+    return `<div class="seller-card" onclick="viewSellerProducts('${s.id}','${escapeHtml(s.name).replace(/'/g,"\\'")}')">
+      <div class="seller-rank">#${i+1}</div>
+      <div class="seller-av">${(s.name[0]||'C').toUpperCase()}</div>
+      <div class="seller-name">${escapeHtml(s.name)}</div>
+      <div style="font-size:.7rem;color:var(--text3)">${s.products} product${s.products===1?'':'s'}</div>
+      <div class="seller-stats">
+        <span>${s.downloads+s.sales} <span class="seller-stat-n" style="display:none"></span>activity</span>
+        ${avgRating?`<span>★ ${avgRating}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function viewSellerProducts(sellerId,name){
+  go('marketplace');tab('marketplace');
+  showToast('Showing products by '+name);
+  setTimeout(async()=>{
+    const products=await sbGet(`/rest/v1/products?select=*&user_id=eq.${sellerId}&published=eq.true&order=created_at.desc`);
+    const list=Array.isArray(products)?products:[];
+    document.getElementById('mp-c').textContent=list.length+' products by '+name;
+    const mpg=document.getElementById('mpg');
+    if(list.length){await loadRatings(list.map(p=>p.id));await loadWishlist();}
+    mpg.innerHTML=list.length?list.map(p=>pcard(p)).join(''):es('🔍','No products found','',"rmp()");
+    bindProductCardEvents(mpg,list);
+  },50);
 }
 
 // ══ MARKETPLACE ══
@@ -2967,11 +3400,34 @@ async function rmp(){
   if(sort==='free')prods=prods.filter(p=>(p.price||0)===0);
   if(sort==='price_asc')prods.sort((a,b)=>(a.price||0)-(b.price||0));
   if(sort==='price_desc')prods.sort((a,b)=>(b.price||0)-(a.price||0));
+
+  // sponsored slot — only show on default browse (no search/filter active)
+  const sponsoredSection=document.getElementById('sponsored-section');
+  const sponsoredGrid=document.getElementById('sponsored-grid');
+  if(sponsoredSection&&sponsoredGrid){
+    if(!q&&!mpCat){
+      const sponsoredProducts=await getActiveSponsoredProducts(4);
+      if(sponsoredProducts.length){
+        await loadRatings(sponsoredProducts.map(p=>p.id));
+        await loadWishlist();
+        sponsoredSection.style.display='block';
+        sponsoredGrid.innerHTML=sponsoredProducts.map(p=>pcard(p,true)).join('');
+        bindProductCardEvents(sponsoredGrid,sponsoredProducts);
+        const sponsoredIds=new Set(sponsoredProducts.map(p=>p.id));
+        prods=prods.filter(p=>!sponsoredIds.has(p.id));
+      } else {
+        sponsoredSection.style.display='none';
+      }
+    } else {
+      sponsoredSection.style.display='none';
+    }
+  }
+
   document.getElementById('mp-c').textContent=prods.length+' products available';
   const mpg=document.getElementById('mpg');
   if(prods.length){await loadRatings(prods.map(p=>p.id));await loadWishlist();}
   mpg.innerHTML=prods.length
-    ?prods.map(pcard).join('')
+    ?prods.map(p=>pcard(p)).join('')
     :`<div style="grid-column:1/-1">${es('🔍','No products found','Try different keywords or clear filters',"rmp()")}</div>`;
   bindProductCardEvents(mpg, prods);
 }
@@ -3441,6 +3897,8 @@ async function rSeller(){
   const mine=await sbGet(`/rest/v1/products?select=*&user_id=eq.${user.id}&order=created_at.desc`);
   document.getElementById('s-tot').textContent=mine.length;
   document.getElementById('s-live').textContent=mine.filter(p=>p.published).length;
+
+  renderActiveCampaigns();
 
   const list=document.getElementById('slist');
   if(!mine.length){
