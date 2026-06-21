@@ -1137,6 +1137,54 @@ try{
 </div>
 
 <!-- ═══ ADMIN REPORTS ═══ -->
+<div class="page" id="page-admin-stats">
+  <div class="dw">
+    <div class="dh">
+      <div>
+        <h1>Platform Analytics</h1>
+        <p>The whole marketplace, at a glance</p>
+      </div>
+      <button class="btn bg-btn bsm" onclick="go('admin-reports')">🛡️ Reports →</button>
+    </div>
+
+    <div class="sg" id="admin-stats-cards">
+      <div class="sc2"><div class="sc2-n" id="as-users">0</div><div class="sc2-l">Total users</div></div>
+      <div class="sc2"><div class="sc2-n" id="as-sellers">0</div><div class="sc2-l">Sellers</div></div>
+      <div class="sc2"><div class="sc2-n" id="as-products">0</div><div class="sc2-l">Products</div></div>
+      <div class="sc2"><div class="sc2-n" id="as-gmv">$0</div><div class="sc2-l">Gross sales</div></div>
+      <div class="sc2"><div class="sc2-n" id="as-revenue">$0</div><div class="sc2-l">Platform revenue</div></div>
+      <div class="sc2"><div class="sc2-n" id="as-orders">0</div><div class="sc2-l">Orders</div></div>
+    </div>
+
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:20px 22px 8px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:.85rem;font-weight:800;color:var(--text)">New signups — last 30 days</div>
+        <div style="font-size:.7rem;color:var(--text3)" id="as-signups-total">0 total</div>
+      </div>
+      <svg id="admin-signups-chart" viewBox="0 0 700 160" style="width:100%;height:auto;display:block"></svg>
+    </div>
+
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:20px 22px 8px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:.85rem;font-weight:800;color:var(--text)">Gross sales — last 30 days</div>
+        <div style="font-size:.7rem;color:var(--text3)" id="as-gmv-total">$0 total</div>
+      </div>
+      <svg id="admin-gmv-chart" viewBox="0 0 700 160" style="width:100%;height:auto;display:block"></svg>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div style="background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:20px 22px">
+        <div style="font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:14px">Top categories</div>
+        <div id="admin-top-categories"></div>
+      </div>
+      <div style="background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:20px 22px">
+        <div style="font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:14px">Top sellers by revenue</div>
+        <div id="admin-top-sellers-revenue"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="page" id="page-admin-reports">
   <div class="dw">
     <div class="dh">
@@ -2397,13 +2445,13 @@ window.addEventListener('scroll',()=>document.getElementById('nav').classList.to
 function tab(n){document.querySelectorAll('.nt').forEach(t=>t.classList.remove('on'));const el=document.getElementById('t-'+n);if(el)el.classList.add('on');document.querySelectorAll('.nm-link').forEach(t=>t.classList.remove('on'));const me=document.getElementById('m-t-'+n);if(me)me.classList.add('on')}
 function updateNav(){
   const r=document.getElementById('nav-r');
-  const adminBtn=isAdmin()?'<button class="nb bg-btn" onclick="go(\'admin-reports\')" title="Reports">🛡️</button>':'';
+  const adminBtn=isAdmin()?'<button class="nb bg-btn" onclick="go(\'admin-stats\')" title="Platform analytics">📊</button><button class="nb bg-btn" onclick="go(\'admin-reports\')" title="Reports">🛡️</button>':'';
   r.innerHTML=user
     ?adminBtn+`<button class="nb nb-g" onclick="go('upload')">↑ Upload</button><div class="nav-av" onclick="go('profile')">${(user.email||'U')[0].toUpperCase()}</div>`
     :`<button class="nb nb-g" onclick="go('login')">Sign in</button><button class="nb nb-s" onclick="go('signup')">Get started →</button>`;
   const ma=document.getElementById('nm-actions');
   if(ma){
-    const adminBtnM=isAdmin()?`<button class="nb bg-btn" style="width:100%;justify-content:center" onclick="go('admin-reports');toggleMobileMenu()">🛡️ Reports</button>`:'';
+    const adminBtnM=isAdmin()?`<button class="nb bg-btn" style="width:100%;justify-content:center" onclick="go('admin-stats');toggleMobileMenu()">📊 Analytics</button><button class="nb bg-btn" style="width:100%;justify-content:center" onclick="go('admin-reports');toggleMobileMenu()">🛡️ Reports</button>`:'';
     ma.innerHTML=user
       ?adminBtnM+`<button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('upload');toggleMobileMenu()">↑ Upload</button><button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('profile');toggleMobileMenu()">Profile</button>`
       :`<button class="nb nb-g" style="width:100%;justify-content:center" onclick="go('login');toggleMobileMenu()">Sign in</button><button class="nb nb-s" style="width:100%;justify-content:center" onclick="go('signup');toggleMobileMenu()">Get started →</button>`;
@@ -2435,6 +2483,10 @@ function go(n){
     showToast('Not authorized');
     n='home';
   }
+  if(n==='admin-stats'&&!isAdmin()){
+    showToast('Not authorized');
+    n='home';
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById('page-'+n).classList.add('on');
   window.scrollTo(0,0);
@@ -2446,6 +2498,7 @@ function go(n){
   if(n==='purchases'&&user){rPurchases()}
   if(n==='wishlist'&&user){rWishlist()}
   if(n==='admin-reports'){rAdminReports();rAdminVerification();}
+  if(n==='admin-stats')rAdminStats();
   if(n==='messages')rMessages();
   if(n!=='messages'&&realtimeWs){try{realtimeWs.close();realtimeWs=null}catch(e){}}
   if(n==='contact')buildFAQ();
@@ -3909,6 +3962,150 @@ async function revokeVerification(sellerId){
   if(res&&res.error){showToast(res.error.message||'Could not update seller');return}
   showToast('Verification revoked');
   rAdminVerification();
+}
+
+// ══ ADMIN: PLATFORM ANALYTICS ══
+function renderSingleLineChart(svgId,records,dateField,valueField,color,days){
+  const svg=document.getElementById(svgId);
+  if(!svg)return {total:0};
+  days=days||30;
+  const now=new Date();
+  const buckets=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(now);
+    d.setDate(d.getDate()-i);
+    d.setHours(0,0,0,0);
+    buckets.push({date:d,val:0});
+  }
+  function bucketFor(dateStr){
+    const d=new Date(dateStr);
+    d.setHours(0,0,0,0);
+    return buckets.find(b=>b.date.getTime()===d.getTime());
+  }
+  let total=0;
+  records.forEach(r=>{
+    const b=bucketFor(r[dateField]);
+    const v=valueField?(parseFloat(r[valueField])||0):1;
+    if(b)b.val+=v;
+    total+=v;
+  });
+
+  const W=700,H=160,padL=10,padR=10,padT=10,padB=24;
+  const chartW=W-padL-padR, chartH=H-padT-padB;
+  const maxVal=Math.max(1,...buckets.map(b=>b.val));
+  const stepX=chartW/(days-1);
+
+  const pathD=buckets.map((b,i)=>{
+    const x=padL+i*stepX;
+    const y=padT+chartH-(b.val/maxVal)*chartH;
+    return (i===0?'M':'L')+x.toFixed(1)+','+y.toFixed(1);
+  }).join(' ');
+
+  // area fill under the line
+  const areaD=pathD+' L'+(padL+chartW)+','+(padT+chartH)+' L'+padL+','+(padT+chartH)+' Z';
+
+  const gridLines=[0,0.5,1].map(f=>{
+    const y=padT+chartH*(1-f);
+    return `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+  }).join('');
+
+  const labelStep=Math.ceil(days/6);
+  const labels=buckets.map((b,i)=>{
+    if(i%labelStep!==0 && i!==days-1)return '';
+    const x=padL+i*stepX;
+    const txt=b.date.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    return `<text x="${x}" y="${H-6}" font-size="9" fill="var(--text3)" text-anchor="middle">${txt}</text>`;
+  }).join('');
+
+  const gradId=svgId+'-grad';
+  svg.innerHTML=`
+    <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${gridLines}
+    <path d="${areaD}" fill="url(#${gradId})" stroke="none"/>
+    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${labels}
+    ${total===0?`<text x="${W/2}" y="${H/2-6}" font-size="12" fill="var(--text3)" text-anchor="middle">No activity yet</text>`:''}
+  `;
+  return {total};
+}
+
+async function rAdminStats(){
+  if(!isAdmin())return;
+
+  const [profiles,products,purchases,bundlePurchases]=await Promise.all([
+    sbGet('/rest/v1/profiles?select=id,created_at'),
+    sbGet('/rest/v1/products?select=id,category,user_id,published'),
+    sbGet('/rest/v1/purchases?select=amount,platform_fee,seller_payout,created_at,seller_id,status&status=eq.completed'),
+    sbGet('/rest/v1/bundle_purchases?select=amount,platform_fee,seller_payout,created_at,seller_id,status&status=eq.completed')
+  ]);
+  const profs=Array.isArray(profiles)?profiles:[];
+  const prods=Array.isArray(products)?products:[];
+  const pus=Array.isArray(purchases)?purchases:[];
+  const bpus=Array.isArray(bundlePurchases)?bundlePurchases:[];
+  const allOrders=[...pus,...bpus];
+
+  const sellerIds=new Set(prods.map(p=>p.user_id));
+  const totalGmv=allOrders.reduce((s,o)=>s+(parseFloat(o.amount)||0),0);
+  const totalPlatformRevenue=allOrders.reduce((s,o)=>s+(parseFloat(o.platform_fee)||0),0);
+
+  document.getElementById('as-users').textContent=profs.length;
+  document.getElementById('as-sellers').textContent=sellerIds.size;
+  document.getElementById('as-products').textContent=prods.length;
+  document.getElementById('as-gmv').textContent='$'+totalGmv.toFixed(2).replace(/\.00$/,'');
+  document.getElementById('as-revenue').textContent='$'+totalPlatformRevenue.toFixed(2).replace(/\.00$/,'');
+  document.getElementById('as-orders').textContent=allOrders.length;
+
+  const signupResult=renderSingleLineChart('admin-signups-chart',profs,'created_at',null,'#6c63ff',30);
+  document.getElementById('as-signups-total').textContent=signupResult.total+' total';
+
+  const gmvResult=renderSingleLineChart('admin-gmv-chart',allOrders,'created_at','amount','#16a34a',30);
+  document.getElementById('as-gmv-total').textContent='$'+gmvResult.total.toFixed(2).replace(/\.00$/,'')+' total';
+
+  // top categories by product count
+  const catCounts={};
+  prods.forEach(p=>{if(p.published)catCounts[p.category||'Other']=(catCounts[p.category||'Other']||0)+1});
+  const topCats=Object.entries(catCounts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxCatCount=Math.max(1,...topCats.map(c=>c[1]));
+  const catEl=document.getElementById('admin-top-categories');
+  if(catEl){
+    catEl.innerHTML=topCats.length?topCats.map(([cat,count])=>{
+      const pct=Math.round((count/maxCatCount)*100);
+      return `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:4px"><span style="font-weight:600;color:var(--text2)">${escapeHtml(cat)}</span><span style="font-weight:700;color:var(--text)">${count}</span></div>
+        <div style="height:6px;background:var(--pale2);border-radius:100px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:100px"></div></div>
+      </div>`;
+    }).join(''):'<div style="font-size:.8rem;color:var(--text3)">No published products yet</div>';
+  }
+
+  // top sellers by platform-fee-adjusted revenue (seller_payout)
+  const sellerRevenue={};
+  allOrders.forEach(o=>{
+    if(!o.seller_id)return;
+    sellerRevenue[o.seller_id]=(sellerRevenue[o.seller_id]||0)+(parseFloat(o.seller_payout)||0);
+  });
+  const topSellerIds=Object.entries(sellerRevenue).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const sellerEl=document.getElementById('admin-top-sellers-revenue');
+  if(sellerEl){
+    if(!topSellerIds.length){
+      sellerEl.innerHTML='<div style="font-size:.8rem;color:var(--text3)">No sales yet</div>';
+    } else {
+      const ids=topSellerIds.map(x=>x[0]);
+      const sellerProfiles=await sbGet(`/rest/v1/profiles?select=id,username,full_name&id=in.(${ids.join(',')})`);
+      const profMap={};(sellerProfiles||[]).forEach(pr=>profMap[pr.id]=pr);
+      const maxRevenue=Math.max(1,...topSellerIds.map(x=>x[1]));
+      sellerEl.innerHTML=topSellerIds.map(([id,rev])=>{
+        const name=(profMap[id]&&(profMap[id].full_name||profMap[id].username))||'Seller';
+        const pct=Math.round((rev/maxRevenue)*100);
+        return `<div style="margin-bottom:10px;cursor:pointer" onclick="showStorefront('${id}')">
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:4px"><span style="font-weight:600;color:var(--text2)">${escapeHtml(name)}</span><span style="font-weight:700;color:var(--text)">$${rev.toFixed(2)}</span></div>
+          <div style="height:6px;background:var(--pale2);border-radius:100px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--green);border-radius:100px"></div></div>
+        </div>`;
+      }).join('');
+    }
+  }
 }
 
 async function renderReviewsSection(p){
