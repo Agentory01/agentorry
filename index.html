@@ -3969,7 +3969,7 @@ async function renderReviewsSection(p){
   }
 
   const reviewCards=list.length
-    ? list.map(r=>reviewCardHtml(r,pMap[r.user_id])).join('')
+    ? list.map(r=>reviewCardHtml(r,pMap[r.user_id],isMine)).join('')
     : '<div style="font-size:.82rem;color:var(--text3);padding:8px 0">No reviews yet for this product.</div>';
 
   container.innerHTML=
@@ -3997,11 +3997,30 @@ function setReviewStar(val){
   });
 }
 
-function reviewCardHtml(r,profile){
+function reviewCardHtml(r,profile,isSeller){
   const name=(profile&&(profile.full_name||profile.username))||'Anonymous';
   const initial=(name[0]||'U').toUpperCase();
   const date=new Date(r.created_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
   const mine = user && r.user_id===user.id;
+
+  let replyHtml='';
+  if(r.seller_reply){
+    const replyDate=r.seller_reply_at?new Date(r.seller_reply_at).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'';
+    replyHtml='<div style="margin-top:12px;margin-left:18px;padding:12px 14px;background:var(--pale);border-left:3px solid var(--accent);border-radius:0 10px 10px 0">'
+      +'<div style="font-size:.74rem;font-weight:800;color:var(--accent);margin-bottom:4px">Seller response'+(replyDate?' · '+replyDate:'')+'</div>'
+      +'<div style="font-size:.8rem;color:var(--text2);line-height:1.6">'+escapeHtml(r.seller_reply)+'</div>'
+    +'</div>';
+  } else if(isSeller){
+    replyHtml='<div style="margin-top:10px"><span style="font-size:.74rem;color:var(--accent);font-weight:700;cursor:pointer" onclick="openSellerReplyForm(\''+r.id+'\')">+ Reply to this review</span></div>'
+      +'<div id="seller-reply-form-'+r.id+'" style="display:none;margin-top:8px">'
+        +'<textarea class="fi" id="seller-reply-input-'+r.id+'" rows="2" placeholder="Respond publicly to this review…" style="resize:vertical;margin-bottom:8px"></textarea>'
+        +'<div style="display:flex;gap:8px">'
+          +'<button class="btn bp bxs" onclick="submitSellerReply(\''+r.id+'\')">Post reply</button>'
+          +'<button class="btn bg-btn bxs" onclick="document.getElementById(\'seller-reply-form-'+r.id+'\').style.display=\'none\'">Cancel</button>'
+        +'</div>'
+      +'</div>';
+  }
+
   return '<div style="padding:16px 18px;background:var(--card);border:1.5px solid var(--border);border-radius:14px">'
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
       +'<div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#fff;flex-shrink:0">'+initial+'</div>'
@@ -4012,6 +4031,7 @@ function reviewCardHtml(r,profile){
       +(mine?'<span style="font-size:.7rem;color:var(--red);cursor:pointer;font-weight:700;flex-shrink:0" onclick="deleteMyReview(\''+r.product_id+'\')">Delete</span>':'')
     +'</div>'
     +(r.comment?'<div style="font-size:.82rem;color:var(--text2);line-height:1.6">'+escapeHtml(r.comment)+'</div>':'')
+    +replyHtml
   +'</div>';
 }
 
@@ -4044,6 +4064,24 @@ async function deleteMyReview(productId){
   if(res&&res.error){showToast(res.error.message||'Could not delete review');return}
   showToast('Review removed');
   delete RATINGS[productId];
+  if(currentReviewProduct) renderReviewsSection(currentReviewProduct);
+}
+
+function openSellerReplyForm(reviewId){
+  const form=document.getElementById('seller-reply-form-'+reviewId);
+  if(form)form.style.display='block';
+}
+
+async function submitSellerReply(reviewId){
+  const input=document.getElementById('seller-reply-input-'+reviewId);
+  const text=(input.value||'').trim();
+  if(!text){showToast('Write a reply first');return}
+  const res=await sbAuthPost(`/rest/v1/reviews?id=eq.${reviewId}`,{
+    seller_reply:text,
+    seller_reply_at:new Date().toISOString()
+  },'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not post reply');return}
+  showToast('Reply posted ✓');
   if(currentReviewProduct) renderReviewsSection(currentReviewProduct);
 }
 
