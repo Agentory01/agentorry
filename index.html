@@ -269,6 +269,12 @@ html[data-theme="dark"] .theme-toggle{box-shadow:0 6px 20px rgba(0,0,0,0.4)}
 .bundle-row{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:8px}
 .bundle-row-items{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .bundle-row-tag{font-size:.68rem;font-weight:600;color:var(--text2);background:var(--pale2);padding:3px 9px;border-radius:100px}
+
+/* ══ STOREFRONT ══ */
+.storefront-header{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:28px}
+.storefront-av{width:84px;height:84px;border-radius:22px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 8px 24px rgba(108,99,255,0.25)}
+.storefront-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+@media(max-width:680px){.storefront-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:680px){
   #ad-slot-board{grid-template-columns:repeat(2,1fr)!important}
 }
@@ -1091,6 +1097,16 @@ try{
           <tbody id="payouts-tbody"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STOREFRONT ═══ -->
+<div class="page" id="page-storefront">
+  <div style="max-width:1100px;margin:0 auto;padding:36px 28px 80px">
+    <button class="btn bg-btn bsm" onclick="history.back();go(window.__prevPage||'marketplace')" style="margin-bottom:20px">← Back</button>
+    <div id="storefront-content">
+      <div style="padding:60px;text-align:center;color:var(--text3);font-size:.85rem">Loading storefront…</div>
     </div>
   </div>
 </div>
@@ -2492,8 +2508,8 @@ async function showProduct(p){
         '<div class="pp-cat">'+cat+'</div>'+
         '<div class="pp-title">'+(p.title||'Untitled')+'</div>'+
         '<div class="pp-creator">'+
-          '<div class="pp-av">'+(creator[0]||'C').toUpperCase()+'</div>'+
-          '<div>'+
+          '<div class="pp-av" style="cursor:pointer" onclick="showStorefront(\''+p.user_id+'\')">'+(creator[0]||'C').toUpperCase()+'</div>'+
+          '<div style="cursor:pointer" onclick="showStorefront(\''+p.user_id+'\')">'+
             '<div style="font-size:.82rem;font-weight:700;color:var(--text)">'+creator+verifiedBadgeHtml(sellerVerified)+'</div>'+
             '<div style="font-size:.7rem;color:var(--text3)" id="pp-follower-count">Creator</div>'+
           '</div>'+
@@ -4204,7 +4220,7 @@ async function renderTopSellers(){
 
   container.innerHTML=ranked.map((s,i)=>{
     const avgRating=s.ratingCount?(s.ratingSum/s.ratingCount).toFixed(1):null;
-    return `<div class="seller-card" onclick="viewSellerProducts('${s.id}','${escapeHtml(s.name).replace(/'/g,"\\'")}')">
+    return `<div class="seller-card" onclick="showStorefront('${s.id}')">
       <div class="seller-rank">#${i+1}</div>
       <div class="seller-av">${(s.name[0]||'C').toUpperCase()}</div>
       <div class="seller-name">${escapeHtml(s.name)}${verifiedBadgeHtml(s.verified)}</div>
@@ -4217,18 +4233,80 @@ async function renderTopSellers(){
   }).join('');
 }
 
-async function viewSellerProducts(sellerId,name){
-  go('marketplace');tab('marketplace');
-  showToast('Showing products by '+name);
-  setTimeout(async()=>{
-    const products=await sbGet(`/rest/v1/products?select=*&user_id=eq.${sellerId}&published=eq.true&order=created_at.desc`);
-    const list=Array.isArray(products)?products:[];
-    document.getElementById('mp-c').textContent=list.length+' products by '+name;
-    const mpg=document.getElementById('mpg');
-    if(list.length){await loadRatings(list.map(p=>p.id));await loadWishlist();}
-    mpg.innerHTML=list.length?list.map(p=>pcard(p)).join(''):es('🔍','No products found','',"rmp()");
-    bindProductCardEvents(mpg,list);
-  },50);
+async function showStorefront(sellerId){
+  window.__prevPage = document.querySelector('.page.on')?.id?.replace('page-','') || 'marketplace';
+  const container=document.getElementById('storefront-content');
+  container.innerHTML='<div style="padding:60px;text-align:center;color:var(--text3);font-size:.85rem">Loading storefront…</div>';
+  go('storefront');
+
+  const [profRows,products]=await Promise.all([
+    sbGet(`/rest/v1/profiles?select=*&id=eq.${sellerId}`),
+    sbGet(`/rest/v1/products?select=*&user_id=eq.${sellerId}&published=eq.true&order=created_at.desc`)
+  ]);
+  const prof=profRows&&profRows[0]||{};
+  const list=Array.isArray(products)?products:[];
+  const name=prof.full_name||prof.username||'Creator';
+
+  const productIds=list.map(p=>p.id);
+  let totalSales=0,ratingSum=0,ratingCount=0;
+  if(productIds.length){
+    const [purchases,bundlePurchases,reviews]=await Promise.all([
+      sbGet(`/rest/v1/purchases?select=id&product_id=in.(${productIds.join(',')})&status=eq.completed`),
+      sbGet(`/rest/v1/bundle_purchases?select=id&seller_id=eq.${sellerId}&status=eq.completed`),
+      sbGet(`/rest/v1/reviews?select=rating&product_id=in.(${productIds.join(',')})`)
+    ]);
+    totalSales=(Array.isArray(purchases)?purchases.length:0)+(Array.isArray(bundlePurchases)?bundlePurchases.length:0);
+    (reviews||[]).forEach(r=>{ratingSum+=r.rating;ratingCount++});
+  }
+  const avgRating=ratingCount?(ratingSum/ratingCount).toFixed(1):'—';
+  const memberSince=prof.created_at?new Date(prof.created_at).toLocaleDateString(undefined,{month:'short',year:'numeric'}):'—';
+
+  await loadFollows();
+  const isMine=user&&user.id===sellerId;
+  const isFollowing=user&&myFollows.has(sellerId);
+
+  if(productIds.length){await loadRatings(productIds);await loadWishlist();}
+
+  container.innerHTML=`
+    <div class="storefront-header">
+      <div class="storefront-av">${(name[0]||'C').toUpperCase()}</div>
+      <div style="flex:1;min-width:200px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <h1 style="font-size:1.6rem;font-weight:800;color:var(--text);letter-spacing:-.02em">${escapeHtml(name)}</h1>
+          ${verifiedBadgeHtml(!!prof.verified,'18')}
+        </div>
+        ${prof.username&&prof.full_name?'<div style="font-size:.82rem;color:var(--text3);margin-top:2px">@'+escapeHtml(prof.username)+'</div>':''}
+        ${prof.bio?'<p style="font-size:.88rem;color:var(--text2);line-height:1.6;margin-top:10px;max-width:520px">'+escapeHtml(prof.bio)+'</p>':''}
+        <div style="font-size:.76rem;color:var(--text3);margin-top:8px">Member since ${memberSince}</div>
+      </div>
+      ${isMine
+        ?'<button class="btn bg-btn bsm" onclick="go(\'seller\')">Manage in dashboard →</button>'
+        :(user?'<button class="follow-btn'+(isFollowing?' following':'')+'" id="storefront-follow-btn" onclick="toggleStorefrontFollow(\''+sellerId+'\')">'+(isFollowing?'<span class="fb-default">✓ Following</span><span class="fb-hover">Unfollow</span>':'<span class="fb-default">+ Follow</span>')+'</button>':'')
+      }
+    </div>
+
+    <div class="storefront-stats">
+      <div class="sc2"><div class="sc2-n">${list.length}</div><div class="sc2-l">Products</div></div>
+      <div class="sc2"><div class="sc2-n">${totalSales}</div><div class="sc2-l">Total sales</div></div>
+      <div class="sc2"><div class="sc2-n">${avgRating}</div><div class="sc2-l">Avg rating</div></div>
+      <div class="sc2"><div class="sc2-n">${ratingCount}</div><div class="sc2-l">Reviews</div></div>
+    </div>
+
+    <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:12px">Products</div>
+    <div class="pgrid" id="storefront-pgrid">${list.length?list.map(p=>pcard(p)).join(''):''}</div>
+    ${!list.length?es('📦','No products yet','',"go('marketplace')"):''}
+  `;
+
+  if(list.length)bindProductCardEvents(document.getElementById('storefront-pgrid'),list);
+}
+
+async function toggleStorefrontFollow(sellerId){
+  await toggleFollow(sellerId);
+  const btn=document.getElementById('storefront-follow-btn');
+  if(!btn)return;
+  const isFollowing=myFollows.has(sellerId);
+  btn.classList.toggle('following',isFollowing);
+  btn.innerHTML=isFollowing?'<span class="fb-default">✓ Following</span><span class="fb-hover">Unfollow</span>':'<span class="fb-default">+ Follow</span>';
 }
 
 // ══ MARKETPLACE ══
