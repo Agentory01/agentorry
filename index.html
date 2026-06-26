@@ -875,6 +875,20 @@ try{
   </div></div>
 </div>
 
+<div class="page" id="page-banned">
+  <div class="auth-page"><div class="auth-card" style="text-align:center">
+    <div style="width:64px;height:64px;background:rgba(220,38,38,0.1);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 20px">🚫</div>
+    <div class="auth-title" style="color:var(--red)">Account suspended</div>
+    <p style="font-size:.88rem;color:var(--text2);line-height:1.7;margin-bottom:18px">Your account has been banned from Agentorry. All your listed products have been removed from the marketplace.</p>
+    <div style="background:var(--pale2);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:24px;text-align:left">
+      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:6px">Reason given</div>
+      <div style="font-size:.85rem;color:var(--text);line-height:1.6" id="banned-reason-text">—</div>
+    </div>
+    <p style="font-size:.8rem;color:var(--text3);margin-bottom:20px">If you think this is a mistake, contact us at <a href="mailto:hello@agentorry.com" style="color:var(--accent);font-weight:700">hello@agentorry.com</a></p>
+    <button class="btn bg-btn" style="width:100%;justify-content:center" onclick="go('home')">Back to homepage</button>
+  </div></div>
+</div>
+
 <div class="page" id="page-signup">
   <div class="auth-page"><div class="auth-card">
     <div class="auth-logo"><div class="lm" style="width:44px;height:44px;border-radius:14px"><svg viewBox="0 0 24 24" style="width:20px;height:20px"><polygon points="13,2 4,13 11,13 10,22 20,10 13,10"/></svg></div></div>
@@ -1185,6 +1199,23 @@ try{
   </div>
 </div>
 
+<div class="page" id="page-admin-users">
+  <div class="dw">
+    <div class="dh">
+      <div>
+        <h1>Users</h1>
+        <p>Search any user — view their activity, ban or unban</p>
+      </div>
+      <button class="btn bg-btn bsm" onclick="go('admin-reports')">🛡️ Reports →</button>
+    </div>
+    <div class="sbox" style="margin-bottom:20px">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="sinput" id="admin-user-search" placeholder="Search by name, username, or email…" oninput="searchAdminUsers()">
+    </div>
+    <div id="admin-users-list"></div>
+  </div>
+</div>
+
 <div class="page" id="page-admin-reports">
   <div class="dw">
     <div class="dh">
@@ -1192,7 +1223,8 @@ try{
         <h1>Reports</h1>
         <p>Trust &amp; safety — review and act on user reports</p>
       </div>
-      <div style="display:flex;gap:10px">
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn bg-btn bsm" onclick="go('admin-users')">👤 Users →</button>
         <div class="sc2" style="min-width:90px"><div class="sc2-n" id="admin-reports-count" style="font-size:1.2rem">0</div><div class="sc2-l">Total</div></div>
         <div class="sc2" style="min-width:90px"><div class="sc2-n" id="admin-reports-open" style="font-size:1.2rem;color:var(--red)">0</div><div class="sc2-l">Open</div></div>
       </div>
@@ -2487,6 +2519,10 @@ function go(n){
     showToast('Not authorized');
     n='home';
   }
+  if(n==='admin-users'&&!isAdmin()){
+    showToast('Not authorized');
+    n='home';
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById('page-'+n).classList.add('on');
   window.scrollTo(0,0);
@@ -2499,6 +2535,7 @@ function go(n){
   if(n==='wishlist'&&user){rWishlist()}
   if(n==='admin-reports'){rAdminReports();rAdminVerification();}
   if(n==='admin-stats')rAdminStats();
+  if(n==='admin-users')searchAdminUsers();
   if(n==='messages')rMessages();
   if(n!=='messages'&&realtimeWs){try{realtimeWs.close();realtimeWs=null}catch(e){}}
   if(n==='contact')buildFAQ();
@@ -3787,7 +3824,7 @@ async function rAdminReports(){
   let sellerMap={},sellerProductCounts={},sellerReportCounts={};
   if(sellerIds.length){
     const [sellerProfiles,sellerProducts]=await Promise.all([
-      sbGet(`/rest/v1/profiles?select=id,username,full_name,created_at,verified&id=in.(${sellerIds.join(',')})`),
+      sbGet(`/rest/v1/profiles?select=id,username,full_name,created_at,verified,banned&id=in.(${sellerIds.join(',')})`),
       sbGet(`/rest/v1/products?select=id,user_id&user_id=in.(${sellerIds.join(',')})`)
     ]);
     (sellerProfiles||[]).forEach(sp=>sellerMap[sp.id]=sp);
@@ -3824,6 +3861,7 @@ async function rAdminReports(){
         <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:#fff;flex-shrink:0;cursor:pointer" onclick="showStorefront('${prod.user_id}')">${((sellerName||'S')[0]).toUpperCase()}</div>
         <div style="font-size:.76rem;color:var(--text2);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center">
           <span style="font-weight:700;color:var(--text);cursor:pointer" onclick="showStorefront('${prod.user_id}')">${escapeHtml(sellerName||'Seller')}</span>${verifiedBadgeHtml(!!seller?.verified,'11')}
+          ${seller?.banned?'<span style="font-size:.66rem;font-weight:800;color:#fff;background:var(--red);padding:2px 8px;border-radius:100px;text-transform:uppercase;letter-spacing:.04em">Banned</span>':''}
           <span>·</span><span>${sellerProductCount} product${sellerProductCount===1?'':'s'}</span>
           <span>·</span><span>joined ${sellerAge||'—'}</span>
           ${sellerReportCount>1?'<span>·</span><span style="font-weight:700;color:var(--red)">'+sellerReportCount+' total reports</span>':''}
@@ -3846,6 +3884,8 @@ async function rAdminReports(){
         ${r.status!=='resolved'?`<button class="btn bxs" style="background:var(--green);color:#fff" onclick="updateReportStatus('${r.id}','resolved')">Mark resolved</button>`:''}
         ${r.status!=='dismissed'?`<button class="btn bg-btn bxs" onclick="updateReportStatus('${r.id}','dismissed')">Dismiss</button>`:''}
         ${prod?`<button class="btn bg-btn bxs" onclick="confirmDeleteProduct('${r.product_id}','${escapeHtml(prod.title||'this product').replace(/'/g,"\\'")}');setTimeout(()=>rAdminReports(),600)">Delete product</button>`:''}
+        ${prod&&seller&&!seller.banned?`<button class="btn bxs" style="background:var(--red);color:#fff" onclick="openBanModal('${prod.user_id}','${escapeHtml(sellerName||'this user').replace(/'/g,"\\'")}')">Ban seller</button>`:''}
+        ${prod&&seller&&seller.banned?`<button class="btn bg-btn bxs" onclick="unbanUser('${prod.user_id}');setTimeout(()=>rAdminReports(),600)">Unban seller</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -4030,6 +4070,129 @@ function renderSingleLineChart(svgId,records,dateField,valueField,color,days){
     ${total===0?`<text x="${W/2}" y="${H/2-6}" font-size="12" fill="var(--text3)" text-anchor="middle">No activity yet</text>`:''}
   `;
   return {total};
+}
+
+// ══ ADMIN: USER MANAGEMENT & BAN SYSTEM ══
+let adminUserSearchTimeout=null;
+
+function searchAdminUsers(){
+  clearTimeout(adminUserSearchTimeout);
+  adminUserSearchTimeout=setTimeout(doSearchAdminUsers,250);
+}
+
+async function doSearchAdminUsers(){
+  if(!isAdmin())return;
+  const list=document.getElementById('admin-users-list');
+  if(!list)return;
+  const q=(document.getElementById('admin-user-search')?.value||'').trim();
+  list.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:.82rem">Searching…</div>';
+
+  let url='/rest/v1/profiles?select=*&order=created_at.desc&limit=30';
+  if(q){
+    const enc=encodeURIComponent('%'+q+'%');
+    url=`/rest/v1/profiles?select=*&or=(username.ilike.${enc},full_name.ilike.${enc})&order=created_at.desc&limit=30`;
+  }
+  const rows=await sbGet(url);
+  const profs=Array.isArray(rows)?rows:[];
+
+  if(!profs.length){
+    list.innerHTML=es('🔍','No users found','Try a different search',"document.getElementById('admin-user-search').value='';searchAdminUsers()");
+    return;
+  }
+
+  const ids=profs.map(p=>p.id);
+  const [products,reports]=await Promise.all([
+    sbGet(`/rest/v1/products?select=id,user_id&user_id=in.(${ids.join(',')})`),
+    sbGet('/rest/v1/reports?select=id,product_id')
+  ]);
+  const prodCounts={};(products||[]).forEach(p=>prodCounts[p.user_id]=(prodCounts[p.user_id]||0)+1);
+
+  list.innerHTML=profs.map(p=>{
+    const name=p.full_name||p.username||'User';
+    const joined=p.created_at?new Date(p.created_at).toLocaleDateString(undefined,{month:'short',year:'numeric'}):'—';
+    const productCount=prodCounts[p.id]||0;
+    return `<div style="display:flex;align-items:center;gap:14px;background:var(--card);border:1.5px solid ${p.banned?'rgba(220,38,38,0.3)':'var(--border)'};border-radius:14px;padding:14px 18px;margin-bottom:8px;flex-wrap:wrap">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:.85rem;flex-shrink:0;cursor:pointer" onclick="showStorefront('${p.id}')">${(name[0]||'U').toUpperCase()}</div>
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:.85rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;cursor:pointer" onclick="showStorefront('${p.id}')">
+          ${escapeHtml(name)}${verifiedBadgeHtml(!!p.verified,'13')}
+          ${p.banned?'<span style="font-size:.62rem;font-weight:800;color:#fff;background:var(--red);padding:2px 8px;border-radius:100px;text-transform:uppercase;letter-spacing:.04em">Banned</span>':''}
+        </div>
+        <div style="font-size:.72rem;color:var(--text3)">${productCount} product${productCount===1?'':'s'} · joined ${joined}</div>
+        ${p.banned&&p.ban_reason?'<div style="font-size:.72rem;color:var(--red);margin-top:3px">Reason: '+escapeHtml(p.ban_reason)+'</div>':''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        ${p.id===ADMIN_UID?'<span style="font-size:.72rem;color:var(--text3);font-weight:600">You</span>':p.banned
+          ?`<button class="btn bg-btn bxs" onclick="unbanUser('${p.id}');setTimeout(()=>doSearchAdminUsers(),600)">Unban</button>`
+          :`<button class="btn bxs" style="background:var(--red);color:#fff" onclick="openBanModal('${p.id}','${escapeHtml(name).replace(/'/g,"\\'")}')">Ban</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openBanModal(userId,name){
+  const existing=document.getElementById('ban-modal');
+  if(existing)existing.remove();
+  const modal=document.createElement('div');
+  modal.id='ban-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(10,10,20,0.55);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=`
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:22px;padding:32px;max-width:400px;width:100%;box-shadow:0 24px 70px rgba(var(--shadow-col),0.25)">
+      <div style="width:52px;height:52px;background:rgba(220,38,38,0.1);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:16px">🚫</div>
+      <div style="font-size:1.05rem;font-weight:800;color:var(--text);margin-bottom:6px">Ban ${escapeHtml(name)}?</div>
+      <p style="font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:16px">They'll be logged out immediately, all their products will be unpublished, and they'll see this reason when they try to sign in.</p>
+      <div class="fg"><label class="fl">Reason for ban</label><textarea class="fi" id="ban-reason-input" rows="3" placeholder="Explain why this account is being banned…" style="resize:vertical"></textarea></div>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="btn" style="flex:1;justify-content:center;background:var(--red);color:#fff" id="ban-confirm-btn" onclick="executeBan('${userId}')">Ban user</button>
+        <button class="btn bg-btn" onclick="document.getElementById('ban-modal').remove()">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function executeBan(userId){
+  const btn=document.getElementById('ban-confirm-btn');
+  const reason=(document.getElementById('ban-reason-input').value||'').trim();
+  if(!reason){showToast('Please explain why you are banning this user');return}
+  if(btn){btn.textContent='Banning...';btn.disabled=true}
+  const res=await sbAuthPost(`/rest/v1/profiles?id=eq.${userId}`,{
+    banned:true,
+    ban_reason:reason,
+    banned_at:new Date().toISOString()
+  },'PATCH');
+  if(res&&res.error){
+    showToast(res.error.message||'Could not ban user');
+    if(btn){btn.textContent='Ban user';btn.disabled=false}
+    return;
+  }
+  showToast('User banned');
+  document.getElementById('ban-modal')?.remove();
+  doSearchAdminUsers();
+}
+
+async function unbanUser(userId){
+  const res=await sbAuthPost(`/rest/v1/profiles?id=eq.${userId}`,{banned:false,ban_reason:null},'PATCH');
+  if(res&&res.error){showToast(res.error.message||'Could not unban user');return}
+  showToast('User unbanned — they can sign in again');
+}
+
+// Checked right after login / on session restore — if banned, force them to the ban screen and log out
+async function checkBanStatus(){
+  if(!user)return false;
+  const rows=await sbGet(`/rest/v1/profiles?select=banned,ban_reason&id=eq.${user.id}`);
+  const prof=rows&&rows[0];
+  if(prof&&prof.banned){
+    const reason=prof.ban_reason||'No reason provided.';
+    user=null;
+    try{sessionStorage.removeItem('agentorry_user')}catch(e){}
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+    document.getElementById('page-banned').classList.add('on');
+    document.getElementById('banned-reason-text').textContent=reason;
+    updateNav();
+    return true;
+  }
+  return false;
 }
 
 async function rAdminStats(){
@@ -4645,6 +4808,8 @@ async function doLogin(){
   if(d.error){showErr('lerr',d.error.message||'Invalid credentials');return}
   user=Object.assign({},d.user,{access_token:d.access_token});
   try{sessionStorage.setItem('agentorry_user',JSON.stringify(user))}catch(e){}
+  const isBanned=await checkBanStatus();
+  if(isBanned)return;
   updateNav();showToast('Welcome back! 👋');const rd=sessionStorage.getItem('redirect')||'home';sessionStorage.removeItem('redirect');go(rd);tab('home');
 }
 async function doSignup(){
@@ -5775,8 +5940,14 @@ function toggleTheme(){
 }
 syncThemeIcons();
 
-updateNav();
-renderHome();
+(async function initApp(){
+  if(user){
+    const banned=await checkBanStatus();
+    if(banned)return; // checkBanStatus already rendered the ban screen and cleared user
+  }
+  updateNav();
+  renderHome();
+})();
 </script>
 
 <!-- ═══ COOKIE OVERLAY ═══ -->
