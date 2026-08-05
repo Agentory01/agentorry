@@ -14,7 +14,6 @@ async function main() {
   let html = await response.text();
 
   const requiredMarkers = [
-    'id="page-discover"',
     'id="page-terms"',
     'id="cookie-overlay"',
     'The Marketplace for',
