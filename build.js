@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
-  const sourceUrl = 'https://agentorry.com/?gradient-source=' + Date.now();
+  const sourceUrl = 'https://agentorry.com/?restore-original-gradient=' + Date.now();
   const response = await fetch(sourceUrl, {
     headers: { 'User-Agent': 'Agentorry-Vercel-Build' }
   });
@@ -28,68 +28,16 @@ async function main() {
     }
   }
 
-  const gradientStyle = `
-<style id="agentorry-synced-hero-gradient">
-@keyframes agentorryHeroGradientFlow{
-  0%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-  100%{background-position:0% 50%}
-}
-
-.hero-word.hero-agent,
-.hero-word.hero-automation{
-  background:linear-gradient(
-    90deg,
-    #c55ce2 0%,
-    #ec4899 22%,
-    #8b5cf6 48%,
-    #6c63ff 72%,
-    #38bdf8 100%
-  )!important;
-  background-size:260% 100%!important;
-  background-position:0% 50%;
-  animation:agentorryHeroGradientFlow 6s ease-in-out infinite!important;
-  -webkit-background-clip:text!important;
-  background-clip:text!important;
-  -webkit-text-fill-color:transparent!important;
-}
-
-.hero-plus{
-  background:linear-gradient(
-    90deg,
-    #c55ce2 0%,
-    #ec4899 22%,
-    #8b5cf6 48%,
-    #6c63ff 72%,
-    #38bdf8 100%
-  )!important;
-  background-size:260% 100%!important;
-  background-position:0% 50%;
-  animation:agentorryHeroGradientFlow 6s ease-in-out infinite!important;
-}
-
-@media (prefers-reduced-motion:reduce){
-  .hero-word.hero-agent,
-  .hero-word.hero-automation,
-  .hero-plus{
-    animation:none!important;
-    background-position:50% 50%!important;
-  }
-}
-</style>`;
-
-  const existingStyle = /\n?<style id="agentorry-synced-hero-gradient">[\s\S]*?<\/style>/;
-  if (existingStyle.test(html)) {
-    html = html.replace(existingStyle, '\n' + gradientStyle);
-  } else {
-    html = html.replace('</head>', gradientStyle + '\n</head>');
-  }
+  html = html.replace(
+    /\n?<style id="agentorry-synced-hero-gradient">[\s\S]*?<\/style>/,
+    ''
+  );
 
   const outputDir = path.join(__dirname, 'public');
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(path.join(outputDir, 'index.html'), html, 'utf8');
 
-  console.log('Agentorry synchronized hero gradient built successfully');
+  console.log('Agentorry original hero gradient restored successfully');
 }
 
 main().catch(error => {
