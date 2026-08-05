@@ -1,0 +1,80 @@
+name: Clean final Agentorry night mode
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/clean-current-night-mode.yml
+
+permissions:
+  contents: write
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Clean inserted night-mode blocks
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          def clean_block(start_marker, end_marker):
+              nonlocal_text = None
+              start = text.find(start_marker)
+              if start == -1:
+                  return text
+              end = text.find(end_marker, start)
+              if end == -1:
+                  return text
+              end += len(end_marker)
+              block = text[start:end]
+              block = block.replace('\\n', '\n')
+              block = block.replace('\\\n', '\n')
+              return text[:start] + block + text[end:]
+
+          for start_marker, end_marker in [
+              ('<!-- ══ PERMANENT BOTTOM-LEFT NIGHT MODE BUTTON ══ -->', '</style>'),
+              ('<!-- ══ DARK-MODE FIX FOR THE POWERED-BY-AI SUNBURST ══ -->', '</style>'),
+              ('<!-- Permanent theme control outside #nav-r so updateNav() cannot remove it. -->', '</button>'),
+          ]:
+              start = text.find(start_marker)
+              if start != -1:
+                  end = text.find(end_marker, start)
+                  if end != -1:
+                      end += len(end_marker)
+                      block = text[start:end].replace('\\n', '\n').replace('\\\n', '\n')
+                      text = text[:start] + block + text[end:]
+
+          text = text.replace('\\\n<!-- ══ PERMANENT BOTTOM-LEFT NIGHT MODE BUTTON ══ -->', '\n<!-- ══ PERMANENT BOTTOM-LEFT NIGHT MODE BUTTON ══ -->')
+          text = text.replace('\\\n<!-- ══ DARK-MODE FIX FOR THE POWERED-BY-AI SUNBURST ══ -->', '\n<!-- ══ DARK-MODE FIX FOR THE POWERED-BY-AI SUNBURST ══ -->')
+          text = text.replace('\\\n<!-- Permanent theme control outside #nav-r so updateNav() cannot remove it. -->', '\n<!-- Permanent theme control outside #nav-r so updateNav() cannot remove it. -->')
+
+          if 'id="theme-toggle-float"' not in text:
+              raise SystemExit('Missing final night-mode button; refusing to commit.')
+          if 'id="agentorry-sunburst"' not in text:
+              raise SystemExit('Missing sunburst dark-mode fix; refusing to commit.')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit cleaned final version
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "Final index.html is already clean."
+            exit 0
+          fi
+          git config user.name "Agentorry"
+          git config user.email "youssefchahir2012@gmail.com"
+          git add index.html
+          git commit -m "Prepare final night mode deployment"
+          git push origin HEAD:main
