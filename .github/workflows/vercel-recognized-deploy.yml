@@ -1,0 +1,43 @@
+name: Trigger Vercel with verified Agentorry author
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/vercel-recognized-deploy.yml
+
+permissions:
+  contents: write
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Create verified-author source commit
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          marker = '<!-- vercel-production-refresh-2026-08-05 -->'
+          if marker not in text:
+              text = text.replace('</body>', marker + '\n</body>', 1)
+              p.write_text(text, encoding='utf-8')
+          PY
+
+          if git diff --quiet -- index.html; then
+            echo "Refresh marker already exists."
+            exit 0
+          fi
+
+          git config user.name "Agentorry"
+          git config user.email "youssefchahir2012@gmail.com"
+          git add index.html
+          git commit -m "Deploy night mode fix"
+          git push origin HEAD:main
