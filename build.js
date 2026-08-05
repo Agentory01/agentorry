@@ -2,329 +2,145 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
-  const sourceUrl = 'https://agentorry.com/?expanded-terms-source=' + Date.now();
-  const response = await fetch(sourceUrl, {
-    headers: { 'User-Agent': 'Agentorry-Vercel-Build' }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Could not fetch the current Agentorry production site: ${response.status}`);
-  }
-
+  const sourceUrl = 'https://agentorry.com/?market-features=' + Date.now();
+  const response = await fetch(sourceUrl, { headers: { 'User-Agent': 'Agentorry-Vercel-Build' } });
+  if (!response.ok) throw new Error(`Could not fetch live Agentorry: ${response.status}`);
   let html = await response.text();
 
-  const requiredMarkers = [
-    'id="page-home"',
-    'id="page-privacy"',
-    'id="page-terms"',
-    'id="cookie-overlay"',
-    'The Marketplace for',
-    'AI Agents'
-  ];
+  const markers = ['id="page-home"','id="page-product"','id="page-wishlist"','id="sunCanvas"','function showProduct(','function pcard(','function bindProductCardEvents(','id="theme-toggle-float"'];
+  for (const marker of markers) if (!html.includes(marker)) throw new Error(`Missing marker: ${marker}`);
 
-  for (const marker of requiredMarkers) {
-    if (!html.includes(marker)) {
-      throw new Error(`Required live-site marker is missing: ${marker}`);
-    }
-  }
+  html = html.replace(
+    '<div style="position:relative;overflow:hidden;height:380px;background:linear-gradient(180deg,#ffffff 0%,#f0eeff 40%,#e8e3ff 70%,#f5f0ff 100%)">',
+    '<div id="agentorry-sunburst" style="position:relative;overflow:hidden;height:380px;background:linear-gradient(180deg,#ffffff 0%,#f0eeff 40%,#e8e3ff 70%,#f5f0ff 100%)">'
+  );
 
-  const termsPage = `
-<!-- ═══ TERMS ═══ -->
-<div class="page" id="page-terms">
-  <div style="max-width:820px;margin:0 auto;padding:54px 28px 90px">
+  const featureCss = `
+<style id="agentorry-market-features-style">
+html[data-theme="dark"] #agentorry-sunburst{background:linear-gradient(180deg,#17152f 0%,#1b1838 42%,#211d48 72%,#141229 100%)!important;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+html[data-theme="dark"] #agentorry-sunburst canvas{opacity:.7}
+.market-feature-section{display:none}
+.market-feature-section.is-visible{display:block}
+.market-feature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.market-feature-note{font-size:.74rem;color:var(--text3);line-height:1.55;max-width:520px;margin-top:5px}
+.wishlist-heart{position:absolute;top:9px;right:9px;width:35px;height:35px;border-radius:11px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.9);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:1rem;color:#5d5a7d;z-index:3;box-shadow:0 4px 16px rgba(0,0,0,.12);transition:.18s}
+.wishlist-heart:hover{transform:scale(1.07);color:#e11d48}
+.wishlist-heart.saved{color:#e11d48;background:#fff0f4;border-color:rgba(225,29,72,.22)}
+html[data-theme="dark"] .wishlist-heart{background:rgba(20,18,42,.9);border-color:rgba(255,255,255,.14);color:#d3d0ef}
+html[data-theme="dark"] .wishlist-heart.saved{background:#3a1730;color:#fb7185}
+.trust-mini{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 10px}
+.trust-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:var(--pale2);border:1px solid var(--border);font-size:.59rem;font-weight:700;color:var(--text3);white-space:nowrap}
+.trust-chip.good{color:var(--green);background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.18)}
+.trust-chip.warn{color:var(--amber);background:rgba(217,119,6,.08);border-color:rgba(217,119,6,.18)}
+.product-trust-panel{margin:18px 0 4px;padding:16px;border:1.5px solid var(--border);border-radius:14px;background:var(--pale2)}
+.product-trust-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.product-trust-item{padding:11px 12px;border-radius:11px;background:var(--card);border:1px solid var(--border)}
+.product-trust-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;color:var(--text3);margin-bottom:4px}
+.product-trust-value{font-size:.78rem;font-weight:750;color:var(--text)}
+.product-trust-help{font-size:.68rem;color:var(--text3);line-height:1.5;margin-top:11px}
+.pp-wishlist{width:100%;justify-content:center;margin-bottom:10px}
+.rank-badge{position:absolute;left:8px;top:8px;padding:4px 9px;border-radius:999px;background:rgba(15,14,26,.82);color:white;font-size:.6rem;font-weight:800;z-index:2;backdrop-filter:blur(8px)}
+@media(max-width:620px){.market-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product-trust-grid{grid-template-columns:1fr}.wishlist-heart{width:32px;height:32px}}
+</style>`;
 
-    <div style="margin-bottom:34px">
-      <div style="font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px">Legal</div>
-      <h1 style="font-size:clamp(2.15rem,5vw,3rem);font-weight:800;color:var(--text);letter-spacing:-.035em;margin-bottom:12px">Terms & Conditions</h1>
-      <p style="color:var(--text3);font-size:.82rem">Last updated: August 5, 2026</p>
-    </div>
+  const oldFeatureCss = /\n?<style id="agentorry-market-features-style">[\s\S]*?<\/style>/;
+  html = oldFeatureCss.test(html) ? html.replace(oldFeatureCss, '\n' + featureCss) : html.replace('</head>', featureCss + '\n</head>');
 
-    <div style="background:var(--pale);border:1.5px solid rgba(108,99,255,0.18);border-radius:18px;padding:22px 24px;margin-bottom:30px">
-      <div style="font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px">Important notice</div>
-      <p style="font-size:.84rem;color:var(--text2);line-height:1.75">These Terms form a binding agreement between you and the operator of Agentorry. They contain important rules about marketplace transactions, seller responsibility, refunds, disclaimers, limitations of liability, and dispute resolution. Nothing in these Terms removes rights or remedies that cannot legally be waived.</p>
-    </div>
-
-    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:22px 24px;margin-bottom:34px">
-      <div style="font-size:.78rem;font-weight:800;color:var(--text);margin-bottom:10px">Key points</div>
-      <ul style="padding-left:18px;display:flex;flex-direction:column;gap:7px;font-size:.8rem;color:var(--text2);line-height:1.65">
-        <li>Agentorry is a marketplace and generally does not create, own, operate, or guarantee third-party products.</li>
-        <li>Sellers are responsible for their products, descriptions, licenses, support, legal compliance, and intellectual-property rights.</li>
-        <li>AI products and outputs may be inaccurate, incomplete, unsafe, or unsuitable for a particular use.</li>
-        <li>Agentorry is not liable for good-faith accidental errors or third-party conduct except where applicable law does not allow that liability to be excluded.</li>
-        <li>Paid transactions are subject to the refund, fee, payment, and dispute rules below.</li>
-      </ul>
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:28px;font-size:.84rem;color:var(--text2);line-height:1.78">
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">1. Acceptance of These Terms</h2>
-        <p>By accessing, browsing, creating an account, joining the waitlist, uploading a product, purchasing, downloading, reviewing, messaging, or otherwise using Agentorry, you agree to these Terms and the Privacy Policy. If you do not agree, you must not use Agentorry.</p>
-        <p style="margin-top:9px">If you use Agentorry for a company or other organization, you confirm that you have authority to bind that organization, and “you” includes both you and that organization.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">2. About Agentorry and Our Marketplace Role</h2>
-        <p>Agentorry provides an online marketplace where independent creators may list AI agents, automations, chatbots, workflows, prompt packs, source-code projects, and related digital products. Buyers may discover, evaluate, purchase, and download those products.</p>
-        <p style="margin-top:9px">Unless a listing clearly states that Agentorry is the seller, Agentorry is an intermediary and is not the creator, employer, agent, partner, joint venturer, distributor, or legal representative of a third-party seller. A transaction for a third-party product is principally between the buyer and the seller, with Agentorry providing marketplace, payment, security, hosting, and administrative services.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">3. Eligibility and Authority</h2>
-        <p>You must be at least 18 years old and legally capable of entering into a binding contract. You may not use Agentorry if applicable law prohibits you from doing so, if you are subject to sanctions that prohibit the transaction, or if your account was previously permanently suspended unless Agentorry gives written permission.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">4. Accounts and Account Security</h2>
-        <p>You must provide accurate, current, and complete information and keep it updated. You are responsible for maintaining the confidentiality of your credentials, devices, recovery methods, and account activity. You must promptly notify Agentorry of suspected unauthorized access.</p>
-        <p style="margin-top:9px">Agentorry may require identity, business, payment, tax, or ownership verification. We may refuse, limit, suspend, or close accounts where information is false, unverifiable, misleading, duplicated, compromised, or associated with prohibited conduct.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">5. Seller Status and Responsibilities</h2>
-        <p>Sellers act independently and are fully responsible for their products and business activity. Each seller represents and warrants that:</p>
-        <ul style="margin-top:9px;padding-left:19px;display:flex;flex-direction:column;gap:7px">
-          <li>the seller owns the product or has all rights, licenses, permissions, and authority required to list and sell it;</li>
-          <li>the product is a genuine AI-related digital product and not a misleading, empty, copied, stolen, unsafe, or falsely advertised file;</li>
-          <li>the listing, screenshots, demonstrations, performance claims, compatibility claims, and documentation are accurate and not deceptive;</li>
-          <li>the product complies with applicable laws, regulations, platform rules, third-party terms, open-source licenses, privacy obligations, and intellectual-property rights;</li>
-          <li>the product does not contain malware, spyware, ransomware, credential theft, undisclosed tracking, destructive code, unauthorized access mechanisms, or concealed harmful functionality;</li>
-          <li>the seller will provide reasonable setup information, a README, dependency information, licensing terms, and support details appropriate to the product;</li>
-          <li>the seller will not manipulate ratings, downloads, sales, rankings, reviews, referrals, or marketplace activity.</li>
-        </ul>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">6. Product Validation and Review</h2>
-        <p>Agentorry may use automated and manual systems to scan, classify, validate, reject, quarantine, remove, or investigate products. Validation is a risk-reduction measure, not a certification, warranty, audit, endorsement, or guarantee that a product is secure, lawful, accurate, useful, compatible, complete, or free of vulnerabilities.</p>
-        <p style="margin-top:9px">A product may pass validation and still contain defects or risks that were not detected. Buyers remain responsible for reviewing code, documentation, permissions, dependencies, data access, network activity, and deployment settings before running a product in a sensitive or production environment.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">7. AI-Specific Risks and Outputs</h2>
-        <p>AI systems are probabilistic and may generate inaccurate, incomplete, biased, offensive, outdated, fabricated, infringing, unsafe, or unexpected outputs. Products may depend on changing models, APIs, prompts, datasets, third-party providers, usage limits, or external services.</p>
-        <p style="margin-top:9px">You must independently verify important outputs and must not rely on an Agentorry product as the sole basis for medical, legal, financial, employment, safety-critical, law-enforcement, weapons, emergency, or other high-impact decisions. Sellers must clearly disclose material limitations and required human oversight.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">8. Product Licenses</h2>
-        <p>A purchase gives the buyer only the license described in the listing or included license file. If no separate license is stated, the buyer receives a limited, non-exclusive, non-transferable, revocable license to use one copy of the product for the buyer's own lawful personal or internal business use.</p>
-        <p style="margin-top:9px">A buyer may not resell, sublicense, publicly redistribute, leak, mirror, re-upload, remove ownership notices from, or commercially exploit the product as a competing product unless the seller expressly permits it in writing. Open-source components remain subject to their applicable licenses.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">9. Buyer Responsibilities</h2>
-        <p>Buyers are responsible for confirming that a product meets their needs, reviewing system requirements, maintaining backups, protecting credentials and API keys, using sandboxed or isolated environments where appropriate, and complying with the seller's license and all applicable laws.</p>
-        <p style="margin-top:9px">A buyer must not use a product to violate rights, evade security, deceive users, process data without authority, create unlawful content, or cause harm. Downloading a product does not transfer ownership of the product or its intellectual property.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">10. Prices, Platform Fees, and Seller Proceeds</h2>
-        <p>Sellers set product prices unless Agentorry states otherwise. Agentorry currently charges a 9% platform fee on paid sales, so the seller generally keeps 91% before taxes, refunds, chargebacks, currency conversion, payment-provider costs, reserves, or other disclosed deductions. Free products have no platform fee.</p>
-        <p style="margin-top:9px">Agentorry may change fees with reasonable advance notice, including at least 30 days where practicable. Promotional or early-access fee arrangements may be limited, changed, or withdrawn according to their stated conditions.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">11. Payments, Payouts, Reserves, and Chargebacks</h2>
-        <p>Payments and payouts may be processed by third-party payment providers and are subject to their terms, verification requirements, availability, processing times, and restrictions. Agentorry does not guarantee that every payment method, currency, country, or payout route will be available.</p>
-        <p style="margin-top:9px">Agentorry may delay, withhold, reverse, offset, or establish a reasonable reserve against seller proceeds where needed to address refunds, disputes, fraud, chargebacks, legal obligations, security concerns, policy violations, negative balances, or payment-provider requirements. Sellers remain responsible for chargebacks and amounts owed because of their products or conduct.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">12. Taxes</h2>
-        <p>Users are responsible for determining, reporting, and paying taxes, duties, levies, and governmental charges arising from their use of Agentorry, purchases, sales, or earnings, except where Agentorry is legally required to collect, withhold, report, or remit them. Agentorry may request tax information and may report transaction information to authorities where required.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">13. Refunds and Digital Products</h2>
-        <p>Because digital products can be accessed or copied immediately, purchases are generally final except where these Terms, the listing, or mandatory law provides otherwise. A buyer may request a refund within 3 days of purchase when a product materially fails to work as described or is materially different from its listing.</p>
-        <p style="margin-top:9px">The buyer must provide order details, a clear explanation, and reasonable evidence. Refunds may be denied where the request is late, unsupported, caused by buyer configuration or unsupported use, concerns a disclosed limitation, or follows substantial download, copying, use, or misuse. Agentorry may consult the seller and may approve, deny, or partially resolve a request based on the available evidence and applicable law.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">14. Reviews, Ratings, and Marketplace Integrity</h2>
-        <p>Reviews must reflect a genuine experience and may not be purchased, exchanged, coerced, fabricated, manipulated, posted through duplicate accounts, or used for retaliation. Agentorry may verify purchases, rate-limit activity, remove reviews, adjust rankings, and investigate suspicious behavior.</p>
-        <p style="margin-top:9px">Agentorry does not guarantee that every review is accurate or representative. Opinions belong to the reviewer, not Agentorry.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">15. User Content, Listings, and Promotional License</h2>
-        <p>You retain ownership of content you submit, subject to third-party rights. You grant Agentorry a worldwide, non-exclusive, royalty-free, sublicensable license to host, store, reproduce, format, display, distribute, and use listing information, product images, names, logos, previews, reviews, and related content to operate, secure, improve, and promote Agentorry and the listed product.</p>
-        <p style="margin-top:9px">You confirm that this use will not violate any law, contract, confidentiality duty, privacy right, publicity right, trademark, copyright, patent, or other right.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">16. Intellectual Property Complaints</h2>
-        <p>Agentorry may remove or restrict content that is alleged to infringe intellectual property and may suspend repeat infringers. A complaint should identify the protected work, the allegedly infringing material, the complainant's authority, contact information, and a good-faith statement. False or abusive complaints may result in account action and legal responsibility.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">17. Prohibited Products and Conduct</h2>
-        <p>You may not use Agentorry to create, upload, sell, purchase, distribute, promote, or facilitate:</p>
-        <ul style="margin-top:9px;padding-left:19px;display:flex;flex-direction:column;gap:7px">
-          <li>malware, ransomware, spyware, credential theft, destructive code, botnets, unauthorized remote access, or concealed surveillance;</li>
-          <li>products intended to unlawfully hack, exploit, bypass security, evade access controls, impersonate others, or steal data;</li>
-          <li>fraud, scams, deceptive automation, fake reviews, fake engagement, phishing, spam, account abuse, or platform manipulation;</li>
-          <li>stolen, leaked, pirated, counterfeit, plagiarized, or unauthorized intellectual property;</li>
-          <li>content or tools that unlawfully discriminate, harass, threaten, exploit, or facilitate physical harm;</li>
-          <li>illegal goods, regulated weapons, prohibited drugs, unlawful gambling, sexual exploitation, terrorist activity, or other unlawful or seriously harmful conduct;</li>
-          <li>collection, sale, scraping, processing, or disclosure of personal data without a valid legal basis and required notices or consent;</li>
-          <li>conduct that interferes with Agentorry, bypasses fees, circumvents transaction systems, overloads infrastructure, probes vulnerabilities without authorization, or disrupts other users.</li>
-        </ul>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">18. Third-Party Services, Models, APIs, and Links</h2>
-        <p>Products and Agentorry may depend on third-party hosting, payment processors, AI models, APIs, libraries, datasets, websites, or services. Agentorry does not control and is not responsible for their availability, security, pricing, policies, output, changes, suspension, data practices, or conduct.</p>
-        <p style="margin-top:9px">A third party may change or discontinue a service at any time, which may cause a product to stop working. Users are responsible for reviewing and complying with third-party terms and costs.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">19. Privacy, Data Protection, and Confidential Information</h2>
-        <p>Your use of Agentorry is governed by our <span onclick="go('privacy')" style="color:var(--accent);font-weight:700;cursor:pointer">Privacy Policy</span>. Sellers who process personal data through their products are independently responsible for privacy notices, legal bases, permissions, retention, security, user requests, processor agreements, cross-border transfers, and compliance with applicable data-protection law.</p>
-        <p style="margin-top:9px">You must not upload confidential information, trade secrets, personal data, credentials, or proprietary material unless you have authority and appropriate safeguards.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">20. Security and Responsible Disclosure</h2>
-        <p>You must not test, scan, access, or exploit Agentorry systems without written authorization. Security concerns should be reported privately through Agentorry's official contact channel and must not be publicly disclosed before Agentorry has a reasonable opportunity to investigate and remediate them.</p>
-        <p style="margin-top:9px">No security system is perfect. Agentorry does not guarantee that the platform or any product will be free from vulnerabilities, unauthorized access, data loss, or attacks.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">21. Moderation, Removal, Suspension, and Termination</h2>
-        <p>Agentorry may investigate, limit visibility, reject, unpublish, quarantine, remove, preserve, or disclose content and may restrict, suspend, or terminate accounts where reasonably necessary to enforce these Terms, protect users, comply with law or provider requirements, respond to disputes, reduce risk, or protect Agentorry's systems and reputation.</p>
-        <p style="margin-top:9px">Where reasonable and legally permitted, Agentorry may provide notice or an opportunity to appeal. Immediate action may be taken where delay could create harm, fraud, security risk, legal exposure, evidence destruction, or continued violations.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">22. Platform Availability, Changes, and Beta Features</h2>
-        <p>Agentorry may add, modify, suspend, restrict, replace, or discontinue features, interfaces, limits, categories, eligibility rules, storage, integrations, or services. Early-access, preview, beta, experimental, and free features may be incomplete, unstable, changed without notice, or discontinued.</p>
-        <p style="margin-top:9px">Agentorry does not promise continuous availability, a particular uptime, permanent storage, compatibility with every device, or preservation of every listing, message, file, metric, or account. You should maintain your own copies and backups.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">23. Disclaimers of Warranties</h2>
-        <p>To the fullest extent permitted by applicable law, Agentorry, the marketplace, all platform features, and third-party products are provided “as is” and “as available,” without warranties or guarantees of any kind. Agentorry disclaims express, implied, statutory, and other warranties, including merchantability, fitness for a particular purpose, title, non-infringement, accuracy, availability, security, compatibility, satisfactory quality, quiet enjoyment, and results.</p>
-        <p style="margin-top:9px">Agentorry does not guarantee that products will meet expectations, produce revenue, operate without errors, remain compatible with third-party services, or be suitable for production, regulated, sensitive, or high-risk use.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">24. Limitation of Liability, Including Accidental or Unintentional Issues</h2>
-        <p>To the fullest extent permitted by applicable law, Agentorry and its owners, operators, affiliates, personnel, contractors, and service providers will not be liable for indirect, incidental, consequential, special, exemplary, punitive, or enhanced damages, or for lost profits, revenue, business, opportunities, goodwill, reputation, anticipated savings, data, files, credentials, or use, arising from or related to Agentorry, these Terms, a transaction, a seller, a buyer, a product, an AI output, or a third-party service, regardless of the legal theory and even if advised that such damage was possible.</p>
-        <p style="margin-top:9px">To the fullest extent permitted by law, Agentorry will not be liable for good-faith, accidental, or unintentional errors, omissions, mistakes, delays, interruptions, failed notifications, incorrect classifications, validation failures, compatibility problems, data loss, unauthorized third-party conduct, security incidents, outages, or service defects, except to the extent directly caused by fraud, willful misconduct, gross negligence, or another liability that applicable law does not allow to be excluded or limited.</p>
-        <p style="margin-top:9px">To the fullest extent permitted by law, Agentorry's total aggregate liability for all claims arising during any 12-month period will not exceed the greater of: (a) the platform fees you actually paid directly to Agentorry during the 12 months before the event giving rise to the claim; or (b) US$100. This limitation does not apply where applicable law requires a different remedy or prohibits the limitation.</p>
-        <p style="margin-top:9px">Nothing in these Terms prevents any person from bringing a claim or exercising a right that cannot lawfully be waived. No clause guarantees that a claim can never be filed; these clauses define and limit responsibility only to the extent the law permits.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">25. Release Regarding Third-Party Products and Users</h2>
-        <p>To the fullest extent permitted by law, you release Agentorry from claims arising solely from the acts, omissions, products, statements, disputes, transactions, data practices, or conduct of independent buyers, sellers, creators, or other third parties. This release does not apply to responsibility that applicable law directly imposes on Agentorry and does not exclude non-waivable consumer rights.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">26. Indemnity for Sellers and Business Users</h2>
-        <p>To the fullest extent permitted by law, sellers and users acting for a business agree to defend, indemnify, and hold harmless Agentorry and its owners, operators, affiliates, personnel, and service providers from claims, losses, liabilities, damages, judgments, penalties, investigations, settlements, and reasonable legal costs arising from their products, listings, content, taxes, data processing, infringement, violation of law, breach of these Terms, fraud, misconduct, or dispute with another user.</p>
-        <p style="margin-top:9px">This section does not apply to individual consumers to the extent prohibited by consumer-protection law and does not require indemnification for Agentorry's own fraud, willful misconduct, or gross negligence.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">27. Disputes Between Buyers and Sellers</h2>
-        <p>Buyers and sellers should first attempt to resolve product, support, licensing, compatibility, and refund disputes directly and in good faith. Agentorry may offer tools, request evidence, restrict funds, or make an administrative marketplace decision, but Agentorry is not required to act as a court, arbitrator, expert witness, or guarantor.</p>
-        <p style="margin-top:9px">A marketplace decision does not determine legal rights outside Agentorry and does not prevent a party from using remedies available under applicable law.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">28. Dispute Resolution with Agentorry</h2>
-        <p>Before starting formal proceedings against Agentorry, you agree to send a detailed written notice describing the dispute, relevant account and transaction information, the requested resolution, and supporting evidence, and to allow at least 30 days for a good-faith response.</p>
-        <p style="margin-top:9px">Any dispute that is not resolved informally will be handled under applicable law by a court or other legally authorized forum with jurisdiction. Any arbitration or class-action waiver will apply only where legally valid, properly disclosed, and enforceable. Mandatory consumer rights, small-claims rights, and rights that cannot legally be waived remain unaffected.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">29. Governing Law and Mandatory Rights</h2>
-        <p>These Terms are governed by the law legally applicable to the operator of Agentorry and the relevant transaction, without overriding mandatory consumer, privacy, employment, intellectual-property, tax, competition, or other laws that apply regardless of contractual choice.</p>
-        <p style="margin-top:9px">Before Agentorry launches paid transactions at scale, the platform should publish the legal operator's full entity name, registered address, and specific governing-law and forum details. Until then, no provision should be interpreted as inventing a jurisdiction or removing a right granted by mandatory law.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">30. Force Majeure</h2>
-        <p>Agentorry is not responsible for delay or failure caused by events beyond reasonable control, including internet or cloud failures, payment-network failures, cyberattacks, model-provider outages, labor disputes, natural disasters, war, terrorism, civil unrest, epidemics, government action, sanctions, power failures, or interruption of suppliers and infrastructure.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">31. Electronic Communications and Notices</h2>
-        <p>You consent to receive agreements, notices, receipts, security alerts, policy updates, and transaction communications electronically through the platform, account, or email address you provide. You are responsible for keeping your contact information current and checking communications reasonably associated with your account.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">32. Changes to These Terms</h2>
-        <p>Agentorry may update these Terms to reflect new features, risks, laws, business models, payment methods, or operational practices. Material changes may be announced through the platform or by email. The updated date will identify the latest version.</p>
-        <p style="margin-top:9px">Where required by law, Agentorry will request renewed consent. Otherwise, continued use after the effective date constitutes acceptance of the updated Terms.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">33. Assignment</h2>
-        <p>You may not transfer your account or assign these Terms without Agentorry's written consent. Agentorry may assign these Terms in connection with a merger, acquisition, restructuring, financing, sale of assets, change of control, or transfer of the platform, subject to applicable law.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">34. Severability, Waiver, and Interpretation</h2>
-        <p>If a provision is held unlawful or unenforceable, it will be limited or modified to the minimum extent necessary, and the remaining provisions will continue in effect. Failure to enforce a provision is not a waiver. Headings are for convenience and do not control interpretation.</p>
-        <p style="margin-top:9px">Terms such as “including” mean “including without limitation.” Any ambiguity will be resolved according to applicable law, including rules protecting consumers where relevant.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">35. Survival</h2>
-        <p>Provisions concerning ownership, licenses, payments, taxes, refunds, intellectual property, disclaimers, liability limits, releases, indemnity, disputes, governing law, and any provisions that by their nature should continue will survive account closure or termination.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">36. Entire Agreement and Additional Policies</h2>
-        <p>These Terms, the Privacy Policy, listing-specific license terms, payment-provider terms, and any additional policies expressly incorporated by reference form the agreement governing your use of Agentorry. A seller may provide additional product-license terms, but those terms may not reduce mandatory buyer rights or impose obligations on Agentorry without Agentorry's written agreement.</p>
-      </section>
-
-      <section>
-        <h2 style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:11px;padding-bottom:9px;border-bottom:1px solid var(--border)">37. Contact</h2>
-        <p>Questions, notices, legal requests, intellectual-property complaints, and security reports may be sent through Agentorry's official contact page or to:</p>
-        <div style="margin-top:12px;padding:17px 20px;background:var(--pale);border:1.5px solid rgba(108,99,255,0.16);border-radius:13px">
-          <div style="font-weight:800;color:var(--text);margin-bottom:4px">Agentorry</div>
-          <div style="color:var(--accent);font-weight:700">hello@agentorry.com</div>
-          <div style="color:var(--text3);font-size:.76rem;margin-top:5px">Include your account email, relevant order or listing ID, and a clear description of the request.</div>
-        </div>
-      </section>
-
-    </div>
-
-    <div style="margin-top:44px;padding-top:28px;border-top:1px solid var(--border);display:flex;gap:11px;flex-wrap:wrap">
-      <button class="btn bp" onclick="go('waitlist')">Join the waitlist →</button>
-      <button class="btn bs" onclick="go('privacy')">Privacy Policy</button>
-      <button class="btn bg-btn" onclick="go('contact')">Contact us</button>
-    </div>
+  const featureSections = `
+  <div class="sw au market-feature-section" id="agentorry-trending-section">
+    <div class="sh"><div class="sh-l"><div class="ey">Real marketplace activity</div><div class="ti">Trending now</div><div class="market-feature-note">Ranked from genuine views, downloads, purchases, ratings, and recent activity. Empty until real activity exists.</div></div><div class="sh-r"><button class="btn bg-btn bsm" onclick="go('marketplace')">Browse all →</button></div></div>
+    <div class="market-feature-grid" id="agentorry-trending-grid"></div>
   </div>
-</div>
+  <div class="sw au market-feature-section" id="agentorry-featured-section">
+    <div class="sh"><div class="sh-l"><div class="ey">Quality + real engagement</div><div class="ti">Featured products</div><div class="market-feature-note">Chosen from upload validation, documentation, support, secure delivery, and real buyer activity—not paid placement or invented scores.</div></div></div>
+    <div class="market-feature-grid" id="agentorry-featured-grid"></div>
+  </div>
+  <div class="sw au market-feature-section" id="agentorry-recent-section">
+    <div class="sh"><div class="sh-l"><div class="ey">Continue exploring</div><div class="ti">Recently viewed</div></div><div class="sh-r"><button class="btn bg-btn bsm" onclick="clearRecentProducts()">Clear</button></div></div>
+    <div class="market-feature-grid" id="agentorry-recent-grid"></div>
+  </div>
 `;
 
-  const termsPattern = /<!-- ═══ TERMS ═══ -->[\s\S]*?(?=<!-- ═══ BLOG POST 2 - SECURITY ═══ -->)/;
-  if (!termsPattern.test(html)) {
-    throw new Error('Could not locate the complete Terms page block');
+  if (!html.includes('id="agentorry-trending-section"')) {
+    html = html.replace('  <div class="sw au">\n    <div class="sh">\n      <div class="sh-l"><div class="ey">Collections</div>', featureSections + '\n  <div class="sw au">\n    <div class="sh">\n      <div class="sh-l"><div class="ey">Collections</div>');
   }
 
-  html = html.replace(termsPattern, termsPage + '\n\n');
-
-  if (!html.includes('24. Limitation of Liability, Including Accidental or Unintentional Issues') ||
-      !html.includes('37. Contact') ||
-      !html.includes('id="page-privacy"')) {
-    throw new Error('Expanded Terms validation failed');
+  const uploadFields = `
+    <div class="fg"><label class="fl">Documentation</label><select class="fi" id="udocs"><option value="included">Full README and setup guide included</option><option value="partial">Partial documentation</option><option value="missing">No documentation yet</option></select></div>
+    <div class="fg"><label class="fl">Seller support</label><select class="fi" id="usupport" onchange="document.getElementById('uresponse-wrap').style.display=this.value==='available'?'block':'none'"><option value="available">Support available after purchase</option><option value="limited">Limited support</option><option value="not_available">No seller support</option></select></div>
+    <div class="fg" id="uresponse-wrap"><label class="fl">Typical response time (hours)</label><input class="fi" id="uresponse" type="number" min="1" max="720" value="48"><p style="font-size:.7rem;color:var(--text3);margin-top:4px">Shown as a seller-provided estimate, not an Agentorry guarantee.</p></div>`;
+  if (!html.includes('id="udocs"')) {
+    html = html.replace('<div class="fg"><label class="fl">Price (USD)</label>', uploadFields + '\n    <div class="fg"><label class="fl">Price (USD)</label>');
   }
 
-  const outputDir = path.join(__dirname, 'public');
-  fs.mkdirSync(outputDir, { recursive: true });
-  fs.writeFileSync(path.join(outputDir, 'index.html'), html, 'utf8');
+  html = html.replace(
+    "frameworks:uZip.aiFrameworks||[],\n    published:true",
+    "frameworks:uZip.aiFrameworks||[],\n    validation_passed:true,\n    validation_verdict:'Passed',\n    documentation_status:(document.getElementById('udocs')||{}).value||'not_checked',\n    support_status:(document.getElementById('usupport')||{}).value||'not_specified',\n    support_response_hours:((document.getElementById('usupport')||{}).value==='available' ? (parseInt((document.getElementById('uresponse')||{}).value,10)||48) : null),\n    secure_delivery:false,\n    published:true"
+  );
 
-  console.log('Agentorry expanded Terms & Conditions built successfully');
+  const featureScript = String.raw`
+<script id="agentorry-market-features-script">
+(function(){
+  const PRODUCT_FIELDS='id,title,description,category,price,user_id,created_at,updated_at,published,image_url,validation_passed,validation_verdict,ai_score,frameworks,documentation_status,support_status,support_response_hours,secure_delivery';
+  let wishlistIds=new Set();
+
+  function sessionId(){try{let id=localStorage.getItem('agentorry_view_session');if(!id){id='guest_'+crypto.getRandomValues(new Uint32Array(4)).join('_')+'_'+Date.now();localStorage.setItem('agentorry_view_session',id)}return id}catch(e){return 'guest_session_'+Date.now()+'_'+Math.random().toString(36).slice(2)}}
+  function requestHeaders(extra){return Object.assign({},authHeaders(),extra||{})}
+  async function api(path,opts){try{const r=await fetch(SB+path,opts||{headers:H2});if(!r.ok)return[];return await r.json().catch(()=>[])}catch(e){return[]}}
+  async function rpc(name,body){return api('/rest/v1/rpc/'+name,{method:'POST',headers:requestHeaders({'Prefer':'return=representation'}),body:JSON.stringify(body||{})})}
+  function fmtDate(value){if(!value)return 'Not available';try{return new Date(value).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})}catch(e){return 'Not available'}}
+  function docsLabel(p){return p.documentation_status==='included'?'Docs included':p.documentation_status==='partial'?'Partial docs':p.documentation_status==='missing'?'Docs missing':'Docs not checked'}
+  function supportLabel(p){if(p.support_status==='available')return p.support_response_hours?'Support · ~'+p.support_response_hours+'h':'Seller support';if(p.support_status==='limited')return 'Limited support';if(p.support_status==='not_available')return 'No seller support';return 'Support not specified'}
+  function trustChips(p,compact){const out=[];if(p.validation_passed===true||Number(p.ai_score||0)>=50)out.push('<span class="trust-chip good">✓ Verified upload</span>');if(p.documentation_status==='included')out.push('<span class="trust-chip good">📖 Docs included</span>');else if(p.documentation_status==='partial')out.push('<span class="trust-chip warn">📖 Partial docs</span>');if(p.secure_delivery===true)out.push('<span class="trust-chip good">🔒 Secure download</span>');if(p.support_status==='available')out.push('<span class="trust-chip">💬 Support</span>');if(!compact)out.push('<span class="trust-chip">Updated '+fmtDate(p.updated_at||p.created_at)+'</span>');return out.join('')}
+  function heartButton(id){return '<button type="button" class="wishlist-heart '+(wishlistIds.has(String(id))?'saved':'')+'" data-wishlist-id="'+id+'" aria-label="Save to wishlist" title="Save to wishlist">'+(wishlistIds.has(String(id))?'♥':'♡')+'</button>'}
+  function syncHearts(){document.querySelectorAll('[data-wishlist-id]').forEach(b=>{const saved=wishlistIds.has(String(b.dataset.wishlistId));b.classList.toggle('saved',saved);b.textContent=saved?'♥':'♡'})}
+
+  async function loadWishlist(){wishlistIds=new Set();if(!user)return wishlistIds;const rows=await api('/rest/v1/wishlist?select=product_id&user_id=eq.'+user.id,{headers:requestHeaders()});if(Array.isArray(rows))rows.forEach(r=>wishlistIds.add(String(r.product_id)));syncHearts();return wishlistIds}
+  async function toggleWishlist(id){if(!user){sessionStorage.setItem('redirect','wishlist');go('login');showToast('Sign in to save products');return}const key=String(id),saved=wishlistIds.has(key);if(saved){await fetch(SB+'/rest/v1/wishlist?user_id=eq.'+user.id+'&product_id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:requestHeaders()});wishlistIds.delete(key);showToast('Removed from wishlist')}else{const r=await fetch(SB+'/rest/v1/wishlist?on_conflict=user_id,product_id',{method:'POST',headers:requestHeaders({'Prefer':'resolution=ignore-duplicates,return=minimal'}),body:JSON.stringify({user_id:user.id,product_id:id})});if(!r.ok){showToast('Could not save product');return}wishlistIds.add(key);showToast('Saved to wishlist ♥')}syncHearts();if(document.getElementById('page-wishlist').classList.contains('on'))renderWishlistPage()}
+
+  function localRecent(){try{return JSON.parse(localStorage.getItem('agentorry_recent_products')||'[]')}catch(e){return[]}}
+  function saveLocalRecent(id){try{let ids=localRecent().filter(x=>String(x)!==String(id));ids.unshift(String(id));localStorage.setItem('agentorry_recent_products',JSON.stringify(ids.slice(0,12)))}catch(e){}}
+  window.clearRecentProducts=function(){try{localStorage.removeItem('agentorry_recent_products')}catch(e){};const s=document.getElementById('agentorry-recent-section');if(s)s.classList.remove('is-visible');if(user)fetch(SB+'/rest/v1/recently_viewed?user_id=eq.'+user.id,{method:'DELETE',headers:requestHeaders()});showToast('Recently viewed cleared')}
+  async function recordViewed(p){if(!p||!p.id)return;saveLocalRecent(p.id);rpc('record_product_view',{p_product_id:p.id,p_session_id:sessionId()})}
+  async function fetchProducts(ids){if(!ids.length)return[];const rows=await api('/rest/v1/products?select='+PRODUCT_FIELDS+'&published=eq.true&id=in.('+ids.map(encodeURIComponent).join(',')+')',{headers:H2});const map=new Map((Array.isArray(rows)?rows:[]).map(p=>[String(p.id),p]));return ids.map(id=>map.get(String(id))).filter(Boolean)}
+  async function ranked(name){const rows=await rpc(name,{p_limit:8});if(!Array.isArray(rows))return[];const products=await fetchProducts(rows.map(r=>r.product_id));const rankMap=new Map(rows.map(r=>[String(r.product_id),r]));return products.map(p=>Object.assign(p,{_rank:rankMap.get(String(p.id))}))}
+
+  const oldPcard=pcard;
+  pcard=function(p){let card=oldPcard(p);card=card.replace(/(<div class="pcard-img"[^>]*>)/,'$1'+heartButton(p.id)+(p._rank?'<span class="rank-badge">'+(p._rank.rating>0?'★ '+p._rank.rating:'Active now')+'</span>':''));card=card.replace('<div class="pcard-foot">','<div class="trust-mini">'+trustChips(p,true)+'</div><div class="pcard-foot">');return card};
+  const oldHcard=hcard;
+  hcard=function(p){let card=oldHcard(p);card=card.replace(/(<div class="hcrd-img"[^>]*>)/,'$1'+heartButton(p.id));card=card.replace('<div class="hcrd-foot">','<div class="trust-mini">'+trustChips(p,true)+'</div><div class="hcrd-foot">');return card};
+
+  bindProductCardEvents=function(container,products){if(!container)return;container.querySelectorAll('[data-wishlist-id]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();toggleWishlist(btn.dataset.wishlistId)}));container.querySelectorAll('.pcard,.hcrd').forEach(card=>card.addEventListener('click',e=>{if(e.target.closest('.wishlist-heart,.pcard-msg-btn'))return;const p=products.find(x=>String(x.id)===String(card.dataset.productId));if(p)showProduct(p)}));container.querySelectorAll('.pcard-msg-btn').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const p=products.find(x=>String(x.id)===String(btn.dataset.productId));if(p)messageSeller(p.user_id,p.id,p.title||'Untitled')}));syncHearts()};
+
+  const oldShowProduct=showProduct;
+  showProduct=function(p){recordViewed(p);oldShowProduct(p);const buy=document.querySelector('#product-content .pp-buy');if(!buy)return;const main=document.getElementById('pp-main-btn');if(main)main.insertAdjacentHTML('afterend','<button class="btn bg-btn pp-wishlist" data-wishlist-id="'+p.id+'">'+(wishlistIds.has(String(p.id))?'♥ Saved to wishlist':'♡ Save to wishlist')+'</button>');const trust='<div class="product-trust-panel"><div style="font-size:.75rem;font-weight:800;color:var(--text);margin-bottom:10px">Product trust details</div><div class="product-trust-grid">'+'<div class="product-trust-item"><div class="product-trust-label">Upload checks</div><div class="product-trust-value">'+((p.validation_passed===true||Number(p.ai_score||0)>=50)?'✓ Verified upload':'Not verified yet')+'</div></div>'+'<div class="product-trust-item"><div class="product-trust-label">Last updated</div><div class="product-trust-value">'+fmtDate(p.updated_at||p.created_at)+'</div></div>'+'<div class="product-trust-item"><div class="product-trust-label">Documentation</div><div class="product-trust-value">'+docsLabel(p)+'</div></div>'+'<div class="product-trust-item"><div class="product-trust-label">Seller support</div><div class="product-trust-value">'+supportLabel(p)+'</div></div>'+'<div class="product-trust-item"><div class="product-trust-label">Download delivery</div><div class="product-trust-value">'+(p.secure_delivery===true?'🔒 Secure download':'Not marked secure yet')+'</div></div>'+'</div><div class="product-trust-help">“Verified upload” means Agentorry’s automated upload checks passed. It does not guarantee perfect, risk-free, or error-free software. “Secure download” appears only when the file is genuinely delivered through Agentorry’s protected storage.</div></div>';buy.insertAdjacentHTML('beforeend',trust);const w=buy.querySelector('[data-wishlist-id]');if(w)w.onclick=e=>{e.stopPropagation();toggleWishlist(p.id)}};
+
+  async function renderGrid(sectionId,gridId,products){const section=document.getElementById(sectionId),grid=document.getElementById(gridId);if(!section||!grid)return;if(!products.length){section.classList.remove('is-visible');grid.innerHTML='';return}grid.innerHTML=products.map(pcard).join('');bindProductCardEvents(grid,products);section.classList.add('is-visible')}
+  async function renderDiscovery(){const [trending,featured]=await Promise.all([ranked('get_trending_products'),ranked('get_featured_products')]);await renderGrid('agentorry-trending-section','agentorry-trending-grid',trending);await renderGrid('agentorry-featured-section','agentorry-featured-grid',featured);let ids=[];if(user){const rows=await api('/rest/v1/recently_viewed?select=product_id,viewed_at&user_id=eq.'+user.id+'&order=viewed_at.desc&limit=8',{headers:requestHeaders()});ids=Array.isArray(rows)?rows.map(r=>r.product_id):[]}if(!ids.length)ids=localRecent().slice(0,8);await renderGrid('agentorry-recent-section','agentorry-recent-grid',await fetchProducts(ids))}
+  async function renderWishlistPage(){if(!user)return;await loadWishlist();const products=await fetchProducts([...wishlistIds]);const grid=document.getElementById('wgrid');document.getElementById('wc-c').textContent=products.length+' saved';grid.innerHTML=products.length?products.map(pcard).join(''):'<div style="grid-column:1/-1">'+es('♡','Wishlist empty','Save products you want to revisit',"go('marketplace')")+'</div>';bindProductCardEvents(grid,products)}
+
+  const oldRenderHome=renderHome;
+  renderHome=async function(){if(!DB.length)DB=await api('/rest/v1/products?select='+PRODUCT_FIELDS+'&published=eq.true&order=created_at.desc&limit=100',{headers:H2});await loadWishlist();await oldRenderHome();await renderDiscovery()};
+  const oldRmp=rmp;
+  rmp=async function(){if(!DB.length||DB.some(p=>p.updated_at===undefined))DB=await api('/rest/v1/products?select='+PRODUCT_FIELDS+'&published=eq.true&order=created_at.desc&limit=100',{headers:H2});await loadWishlist();return oldRmp()};
+  const oldGo=go;
+  go=function(n){oldGo(n);if(n==='wishlist'&&user)setTimeout(renderWishlistPage,0);if(n==='home')setTimeout(renderDiscovery,50)};
+  const oldUpdateNav=updateNav;
+  updateNav=function(){oldUpdateNav();if(user){const r=document.getElementById('nav-r');if(r&&!r.querySelector('[data-nav-wishlist]'))r.insertAdjacentHTML('afterbegin','<button class="nb nb-g" data-nav-wishlist onclick="go(\'wishlist\')">♡ Wishlist</button>');const ma=document.getElementById('nm-actions');if(ma&&!ma.querySelector('[data-mobile-wishlist]'))ma.insertAdjacentHTML('afterbegin','<button class="nb nb-g" data-mobile-wishlist style="width:100%;justify-content:center" onclick="go(\'wishlist\');toggleMobileMenu()">♡ Wishlist</button>')}};
+
+  loadWishlist().then(()=>{syncHearts();renderDiscovery()});
+})();
+</script>`;
+
+  const oldFeatureScript = /\n?<script id="agentorry-market-features-script">[\s\S]*?<\/script>/;
+  html = oldFeatureScript.test(html) ? html.replace(oldFeatureScript, '\n' + featureScript) : html.replace('</body>', featureScript + '\n</body>');
+
+  if (!html.includes('id="agentorry-trending-section"') || !html.includes('record_product_view') || !html.includes('Product trust details') || !html.includes('id="agentorry-sunburst"')) throw new Error('Marketplace feature validation failed');
+
+  const out = path.join(__dirname,'public');
+  fs.mkdirSync(out,{recursive:true});
+  fs.writeFileSync(path.join(out,'index.html'),html,'utf8');
+  console.log('Wishlist, recently viewed, real rankings, trust details, and dark sunburst built successfully');
 }
 
-main().catch(error => {
-  console.error(error);
-  process.exit(1);
-});
+main().catch(err=>{console.error(err);process.exit(1)});
