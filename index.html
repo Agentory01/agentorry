@@ -472,6 +472,8 @@ footer{background:var(--card);border-top:1px solid var(--border);padding:50px 28
   .sn{font-size:1.6rem}
 }
 </style>
+\n<!-- ══ PERMANENT BOTTOM-LEFT NIGHT MODE BUTTON ══ -->\n<style id="agentorry-bottom-left-night-mode-css">\n#theme-toggle-float{\n  position:fixed!important;\n  left:24px!important;\n  bottom:24px!important;\n  top:auto!important;\n  right:auto!important;\n  z-index:99998!important;\n  width:48px!important;\n  height:48px!important;\n  padding:0!important;\n  display:flex!important;\n  align-items:center!important;\n  justify-content:center!important;\n  border:1.5px solid var(--border)!important;\n  border-radius:14px!important;\n  background:var(--card)!important;\n  color:var(--text2)!important;\n  box-shadow:0 10px 30px rgba(var(--shadow-col),.16),0 3px 12px rgba(108,99,255,.15)!important;\n  cursor:pointer!important;\n  visibility:visible!important;\n  opacity:1!important;\n  transition:transform .2s,border-color .2s,background .2s,color .2s,box-shadow .2s!important;\n}\n#theme-toggle-float:hover{\n  transform:translateY(-3px)!important;\n  border-color:var(--accent)!important;\n  background:var(--pale)!important;\n  color:var(--accent)!important;\n  box-shadow:0 14px 34px rgba(var(--shadow-col),.2),0 5px 16px rgba(108,99,255,.24)!important;\n}\n#theme-toggle-float:active{transform:translateY(-1px) scale(.97)!important}\n#theme-toggle-float svg{\n  width:19px!important;\n  height:19px!important;\n  fill:none!important;\n  stroke:currentColor!important;\n  stroke-width:2!important;\n  stroke-linecap:round!important;\n  stroke-linejoin:round!important;\n  pointer-events:none!important;\n}\n#theme-toggle-float .theme-float-moon{display:none!important}\nhtml[data-theme="dark"] #theme-toggle-float .theme-float-sun{display:none!important}\nhtml[data-theme="dark"] #theme-toggle-float .theme-float-moon{display:block!important}\nhtml[data-theme="dark"] #theme-toggle-float{\n  background:var(--card)!important;\n  color:var(--text)!important;\n  border-color:var(--border2)!important;\n  box-shadow:0 12px 34px rgba(0,0,0,.42),0 4px 15px rgba(139,133,255,.18)!important;\n}\n@media(max-width:560px){\n  #theme-toggle-float{\n    left:15px!important;\n    bottom:15px!important;\n    width:46px!important;\n    height:46px!important;\n    border-radius:13px!important;\n  }\n}\n</style>\n
+\n<!-- ══ DARK-MODE FIX FOR THE POWERED-BY-AI SUNBURST ══ -->\n<style id="agentorry-sunburst-dark-fix">\n:root{\n  --sunburst-bg:linear-gradient(180deg,#ffffff 0%,#f0eeff 40%,#e8e3ff 70%,#f5f0ff 100%);\n}\nhtml[data-theme="dark"]{\n  --sunburst-bg:linear-gradient(180deg,#111024 0%,#17152f 42%,#211f3d 72%,#13122a 100%);\n}\n#agentorry-sunburst{\n  background:var(--sunburst-bg)!important;\n  border-top:1px solid var(--border);\n  border-bottom:1px solid var(--border);\n  transition:background .3s ease,border-color .3s ease;\n}\nhtml[data-theme="dark"] #sunCanvas{\n  opacity:.88!important;\n  filter:saturate(1.15) brightness(1.08);\n}\n#agentorry-sunburst [style*="color:var(--text)"]{color:var(--text)!important}\n#agentorry-sunburst [style*="color:var(--text2)"]{color:var(--text2)!important}\nhtml[data-theme="dark"] #agentorry-sunburst [style*="color:var(--accent)"]{color:#a89dff!important}\n</style>\n
 </head>
 <body>
 <script>
@@ -559,7 +561,7 @@ try{
   </div>
 
   <!-- SUNBURST -->
-  <div style="position:relative;overflow:hidden;height:380px;background:linear-gradient(180deg,#ffffff 0%,#f0eeff 40%,#e8e3ff 70%,#f5f0ff 100%)">
+  <div id="agentorry-sunburst" style="position:relative;overflow:hidden;height:380px;background:var(--sunburst-bg)">
     <canvas id="sunCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;text-align:center;padding:0 20px">
       <div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:10px">Powered by AI</div>
@@ -3373,6 +3375,8 @@ function showWlErr(msg) {
 updateNav();
 renderHome();
 </script>
+
+\n<!-- Permanent theme control outside #nav-r so updateNav() cannot remove it. -->\n<button class="theme-toggle" id="theme-toggle-float" type="button" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Night mode">\n  <svg class="theme-float-sun" viewBox="0 0 24 24" aria-hidden="true">\n    <circle cx="12" cy="12" r="5"/>\n    <line x1="12" y1="1" x2="12" y2="3"/>\n    <line x1="12" y1="21" x2="12" y2="23"/>\n    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>\n    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>\n    <line x1="1" y1="12" x2="3" y2="12"/>\n    <line x1="21" y1="12" x2="23" y2="12"/>\n    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>\n    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>\n  </svg>\n  <svg class="theme-float-moon" viewBox="0 0 24 24" aria-hidden="true">\n    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>\n  </svg>\n</button>\n
 
 <!-- ═══ COOKIE OVERLAY ═══ -->
 <div id="cookie-overlay" style="position:fixed;inset:0;background:rgba(10,10,20,0.75);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden">
