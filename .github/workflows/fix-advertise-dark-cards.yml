@@ -1,0 +1,137 @@
+name: Fix advertise dark cards
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-advertise-dark-cards.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Improve advertise pricing cards
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+
+          css = r'''
+<!-- ══ PREMIUM ADVERTISE PRICING CARDS ══ -->
+<style id="agentorry-advertise-cards-v2">
+.ads-pricing-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:20px;
+  align-items:stretch;
+  margin-bottom:60px;
+}
+.ads-pricing-grid>div{
+  position:relative;
+  min-height:370px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border-radius:24px!important;
+  padding:30px!important;
+  transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease,background .24s ease!important;
+}
+.ads-pricing-grid>div::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:radial-gradient(circle at 50% -15%,rgba(153,139,255,.24),transparent 42%);
+  opacity:.72;
+}
+.ads-pricing-grid>div>*{position:relative;z-index:1}
+.ads-pricing-grid>div>div:nth-last-child(2){flex:1}
+.ads-pricing-grid>div>button{margin-top:auto!important}
+.ads-pricing-grid>div:hover{transform:translateY(-7px)!important}
+.ads-pricing-grid>div:nth-child(2){
+  background:linear-gradient(155deg,#302878 0%,#241e60 55%,#1a1746 100%)!important;
+  border:1px solid rgba(169,155,255,.42)!important;
+  box-shadow:0 22px 55px rgba(76,59,200,.32),inset 0 1px 0 rgba(255,255,255,.07)!important;
+  transform:translateY(-10px) scale(1.025)!important;
+}
+.ads-pricing-grid>div:nth-child(2)::before{
+  background:radial-gradient(circle at 50% -10%,rgba(184,168,255,.34),transparent 45%);
+}
+.ads-pricing-grid>div:nth-child(2):hover{transform:translateY(-15px) scale(1.025)!important}
+.ads-pricing-grid>div:nth-child(2)>div:first-child{
+  border:1px solid rgba(255,255,255,.16)!important;
+  box-shadow:0 7px 18px rgba(0,0,0,.18)!important;
+}
+.ads-pricing-grid>div:nth-child(2) .bw{
+  background:rgba(10,9,31,.82)!important;
+  color:#c7c2ff!important;
+  border:1px solid rgba(178,165,255,.22)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
+}
+.ads-pricing-grid>div:nth-child(2) .bw:hover{
+  background:rgba(15,13,44,.95)!important;
+  color:#fff!important;
+  border-color:rgba(190,178,255,.42)!important;
+}
+html[data-theme="dark"] .ads-pricing-grid>div:not(:nth-child(2)){
+  background:linear-gradient(155deg,rgba(30,29,61,.98),rgba(16,15,36,.98))!important;
+  border:1px solid rgba(139,133,255,.35)!important;
+  box-shadow:0 16px 42px rgba(0,0,0,.33),inset 0 1px 0 rgba(255,255,255,.035)!important;
+}
+html[data-theme="dark"] .ads-pricing-grid>div:not(:nth-child(2)):hover{
+  border-color:rgba(159,148,255,.58)!important;
+  box-shadow:0 22px 52px rgba(70,54,180,.22),inset 0 1px 0 rgba(255,255,255,.05)!important;
+}
+html[data-theme="dark"] .ads-pricing-grid>div:not(:nth-child(2)) [style*="color:var(--text)"]{color:#f5f3ff!important}
+html[data-theme="dark"] .ads-pricing-grid>div:not(:nth-child(2)) [style*="color:var(--text2)"]{color:#c9c5e2!important}
+html[data-theme="dark"] .ads-pricing-grid>div:not(:nth-child(2)) [style*="color:var(--text3)"]{color:#918daa!important}
+html[data-theme="dark"] .ads-pricing-grid>div:not(:nth-child(2)) [style*="color:var(--border2)"]{color:#6e698c!important}
+html[data-theme="dark"] .ads-pricing-grid>div:not(:nth-child(2)) .bp{
+  background:linear-gradient(135deg,#766cff,#9a8cff)!important;
+  color:#fff!important;
+  box-shadow:0 8px 22px rgba(108,99,255,.3)!important;
+}
+html[data-theme="dark"] .ads-pricing-grid>div:not(:nth-child(2)) .bp:hover{
+  box-shadow:0 12px 30px rgba(108,99,255,.42)!important;
+}
+@media(max-width:900px){
+  .ads-pricing-grid{grid-template-columns:1fr;max-width:520px;margin-left:auto;margin-right:auto}
+  .ads-pricing-grid>div,
+  .ads-pricing-grid>div:nth-child(2),
+  .ads-pricing-grid>div:nth-child(2):hover{transform:none!important}
+}
+</style>
+'''
+
+          if 'id="agentorry-advertise-cards-v2"' not in html:
+              html = html.replace('</head>', css + '\n</head>', 1)
+
+          old = '<!-- Pricing cards -->\n    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:60px">'
+          new = '<!-- Pricing cards -->\n    <div class="ads-pricing-grid">'
+          if old in html:
+              html = html.replace(old, new, 1)
+          elif 'class="ads-pricing-grid"' not in html:
+              raise SystemExit('Pricing grid marker not found')
+
+          path.write_text(html, encoding='utf-8')
+          PY
+
+      - name: Commit and clean up workflow
+        shell: bash
+        run: |
+          git config user.name "Agentorry Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/fix-advertise-dark-cards.yml
+          git add index.html
+          git commit -m "Improve advertise pricing cards in dark mode"
+          git push origin HEAD:main
